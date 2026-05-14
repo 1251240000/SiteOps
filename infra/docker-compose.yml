@@ -1,0 +1,140 @@
+# siteops — production stack (single host).
+#
+# Brings up: postgres + redis + web + worker + caddy.
+# Caddy is the only service that publishes ports to the public interface;
+# pg/redis are bound to 127.0.0.1 so they're reachable for ops tooling on
+# the host but never directly exposed to the internet.
+#
+# Usage:
+#   docker compose -f infra/docker-compose.yml build
+#   docker compose -f infra/docker-compose.yml up -d
+#   curl -fsS http://localhost/healthz
+#
+# Required env (see .env.example):
+#   POSTGRES_PASSWORD, REDIS_PASSWORD, AUTH_SECRET, SITEOPS_DOMAIN
+
+name: siteops
+
+x-web-env: &web-env
+  NODE_ENV: production
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  PORT: '3000'
+  HOST: '0.0.0.0'
+  DATABASE_URL: postgres://${POSTGRES_USER:-siteops}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-siteops}
+  REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+  AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+  AUTH_URL: ${AUTH_URL:-}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: siteops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-siteops}
+      POSTGRES_USER: ${POSTGRES_USER:-siteops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-siteops} -d ${POSTGRES_DB:-siteops}']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - siteops-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: siteops-redis
+    restart: unless-stopped
+    command: >
+      sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
+               exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes;
+             else
+               exec redis-server --appendonly yes;
+             fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a $$REDIS_PASSWORD ping | grep -q PONG']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - siteops-net
+
+  web:
+    image: ${SITEOPS_WEB_IMAGE:-siteops/web:local}
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+    container_name: siteops-web
+    restart: unless-stopped
+    environment:
+      <<: *web-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - '3000'
+    networks:
+      - siteops-net
+
+  worker:
+    image: ${SITEOPS_WORKER_IMAGE:-siteops/worker:local}
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.worker
+    container_name: siteops-worker
+    restart: unless-stopped
+    environment:
+      <<: *web-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - siteops-net
+
+  caddy:
+    image: caddy:2
+    container_name: siteops-caddy
+    restart: unless-stopped
+    environment:
+      SITEOPS_DOMAIN: ${SITEOPS_DOMAIN:-localhost}
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:-admin@example.com}
+    ports:
+      - '${CADDY_HTTP_PORT:-80}:80'
+      - '${CADDY_HTTPS_PORT:-443}:443'
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+    networks:
+      - siteops-net
+
+volumes:
+  pg-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
+  lighthouse-data:
+
+networks:
+  siteops-net:
+    name: siteops-net
+    driver: bridge

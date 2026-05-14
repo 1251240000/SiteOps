@@ -1,0 +1,39 @@
+# VCS
+.git
+.gitignore
+.gitattributes
+.github
+
+# Node / build artifacts
+**/node_modules
+**/.pnpm-store
+**/dist
+**/.next
+**/.turbo
+**/.cache
+**/.eslintcache
+**/*.tsbuildinfo
+**/coverage
+**/playwright-report
+**/test-results
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Docs / planning (not needed at runtime)
+docs
+tasks
+feasibility_study_*.md
+
+# Misc
+**/*.log
+tmp
+data

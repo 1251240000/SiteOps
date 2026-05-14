@@ -1,0 +1,36 @@
+{
+  "extends": "@siteops/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    // Next.js apps don't publish `.d.ts` artefacts, so we don't need the
+    // declaration emit machinery; disabling it suppresses TS2742 "inferred
+    // type can't be named" complaints triggered by pnpm's symlinked layout
+    // around `next-auth` re-exports.
+    "declaration": false,
+    "declarationMap": false,
+    "composite": false,
+    // shadcn/ui + Radix UI spread props through their wrappers and rely on
+    // standard "missing means undefined" semantics. The base tsconfig flips
+    // on `exactOptionalPropertyTypes`, which makes that pattern fail for
+    // every component (e.g. `<DropdownMenuCheckboxItem checked={x}/>`).
+    // The other workspace packages keep the strict flag; this app is the
+    // only JSX/UI surface, so loosening it here is contained.
+    "exactOptionalPropertyTypes": false
+  },
+  "include": [
+    "app/**/*",
+    "components/**/*",
+    "hooks/**/*",
+    "lib/**/*",
+    "middleware.ts",
+    "next-env.d.ts",
+    "next.config.mjs",
+    "tailwind.config.ts",
+    "types/**/*",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["dist", ".next", "node_modules"]
+}

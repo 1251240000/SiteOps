@@ -1,0 +1,71 @@
+# siteops — dev dependencies only.
+#
+# Starts Postgres + Redis with their ports published to 127.0.0.1 so the
+# host-side `pnpm dev` (web + worker) can connect at:
+#   - postgres://siteops:siteops@localhost:5432/siteops
+#   - redis://localhost:6379
+#
+# Usage:
+#   docker compose -f infra/docker-compose.dev.yml up -d
+#   docker compose -f infra/docker-compose.dev.yml down       # keep data
+#   docker compose -f infra/docker-compose.dev.yml down -v    # nuke data
+
+name: siteops-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: siteops-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-siteops}
+      POSTGRES_USER: ${POSTGRES_USER:-siteops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-siteops}
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-siteops} -d ${POSTGRES_DB:-siteops}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - siteops-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: siteops-dev-redis
+    restart: unless-stopped
+    # `requirepass` is optional in dev. When REDIS_PASSWORD is empty Redis
+    # starts open on the loopback-bound port, which is fine for local dev.
+    command: >
+      sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
+               exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes;
+             else
+               exec redis-server --appendonly yes;
+             fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli ${REDIS_PASSWORD:+-a $$REDIS_PASSWORD} ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+    networks:
+      - siteops-net
+
+volumes:
+  pg-data:
+  redis-data:
+
+networks:
+  siteops-net:
+    name: siteops-dev-net
+    driver: bridge

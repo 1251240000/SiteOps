@@ -1,0 +1,83 @@
+/**
+ * Edge-safe Auth.js config.
+ *
+ * `middleware.ts` imports this module to gate `/(dashboard)` traffic on the
+ * Edge runtime. Anything Node-only — DB driver, bcrypt — must live in
+ * `lib/auth.ts` and never be imported here, otherwise the middleware bundle
+ * will fail to compile.
+ */
+import type { NextAuthConfig } from 'next-auth';
+
+/** Protected URL prefixes. Anything matching is gated by the middleware. */
+const PROTECTED_PREFIXES = [
+  '/sites',
+  '/traffic',
+  '/revenue',
+  '/roi',
+  '/domains',
+  '/deployments',
+  '/errors',
+  '/alerts',
+  '/integrations',
+  '/settings',
+];
+
+function isProtectedPath(pathname: string): boolean {
+  if (pathname === '/') return true;
+  return PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+export const authConfig = {
+  // Auth.js will redirect unauthenticated requests here (Set via `pages`).
+  pages: { signIn: '/login' },
+  session: {
+    strategy: 'jwt',
+    // 7 days, per T06 spec.
+    maxAge: 60 * 60 * 24 * 7,
+  },
+  trustHost: true,
+  // Providers are declared in `lib/auth.ts` (Node runtime) where Credentials
+  // can call into the DB. Middleware doesn't need them: it only checks for
+  // the presence of a valid JWT session cookie.
+  providers: [],
+  callbacks: {
+    /**
+     * Decides whether a request is allowed through. Returning `false` makes
+     * Auth.js redirect to the `pages.signIn` URL with `?callbackUrl=...`.
+     */
+    authorized({ auth, request: { nextUrl } }) {
+      const isLoggedIn = !!auth?.user;
+      const path = nextUrl.pathname;
+      const onLogin = path === '/login' || path.startsWith('/login/');
+
+      if (onLogin) {
+        // Bounce already-logged-in users off the login page.
+        if (isLoggedIn) {
+          const next = new URL('/', nextUrl);
+          return Response.redirect(next);
+        }
+        return true;
+      }
+      if (!isProtectedPath(path)) return true;
+      return isLoggedIn;
+    },
+    /**
+     * Stamp the user id onto the JWT at sign-in. Auth.js's default JWT
+     * callback already copies `name` / `email` / `picture` from the User
+     * object into the token, so we only need to set `sub` ourselves.
+     */
+    async jwt({ token, user }) {
+      if (user && typeof user.id === 'string' && user.id.length > 0) {
+        token.sub = user.id;
+      }
+      return token;
+    },
+    /** Surface `id` on the Session object the React/API consumers see. */
+    async session({ session, token }) {
+      if (session.user && typeof token.sub === 'string') {
+        session.user.id = token.sub;
+      }
+      return session;
+    },
+  },
+} satisfies NextAuthConfig;

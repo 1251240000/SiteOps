@@ -1,0 +1,95 @@
+name: E2E
+
+# Playwright suite is added in M1 (T07+). Until then this workflow is wired
+# up but only does a smoke check so the schedule and manual trigger paths
+# are exercised. Drop the `if: false` from the playwright step and add the
+# real `pnpm test:e2e` invocation once the suite exists.
+on:
+  workflow_dispatch:
+  schedule:
+    # 03:30 UTC daily (= 11:30 CST). Off-peak enough that flakes don't block
+    # PR turnaround in the morning.
+    - cron: '30 3 * * *'
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Playwright (nightly)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: siteops
+          POSTGRES_USER: siteops
+          POSTGRES_PASSWORD: ${{ secrets.CI_PG_PASSWORD || 'siteops-ci' }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U siteops -d siteops"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      CI: 'true'
+      DATABASE_URL: postgres://siteops:${{ secrets.CI_PG_PASSWORD || 'siteops-ci' }}@localhost:5432/siteops
+      REDIS_URL: redis://localhost:6379
+      AUTH_SECRET: ci-only-do-not-trust
+      TURBO_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Placeholder until M1 ships the Playwright suite. Replace with:
+      #   - run: pnpm exec playwright install --with-deps
+      #   - run: pnpm test:e2e
+      - name: Smoke (placeholder)
+        run: |
+          echo "E2E suite lands in M1 (T07+); workflow is just exercising the schedule for now."
+          pnpm typecheck
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: |
+            **/playwright-report/**
+            **/test-results/**
+          if-no-files-found: ignore
+          retention-days: 7

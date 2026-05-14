@@ -1,0 +1,123 @@
+name: CI
+
+# Runs on every PR and on pushes to the long-lived branches we cut releases
+# from. Workflow_dispatch lets ops re-run the full pipeline by hand when a
+# transient flake needs reproducing.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel in-flight runs for the same ref when a new commit lands; saves CI
+# minutes on rapid-iteration PRs.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: lint · typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Postgres + Redis service containers wired up now so integration tests
+    # added later (T11+) just need to read DATABASE_URL / REDIS_URL. Today's
+    # unit tests use PGlite and don't actually touch these services.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: siteops
+          POSTGRES_USER: siteops
+          # Throwaway CI credential — DB only listens on the runner's loopback.
+          # Anything that needs real secrets must use a repo/org secret.
+          POSTGRES_PASSWORD: ${{ secrets.CI_PG_PASSWORD || 'siteops-ci' }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U siteops -d siteops"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      CI: 'true'
+      DATABASE_URL: postgres://siteops:${{ secrets.CI_PG_PASSWORD || 'siteops-ci' }}@localhost:5432/siteops
+      REDIS_URL: redis://localhost:6379
+      # Never used to sign real sessions; satisfies env validation only.
+      AUTH_SECRET: ci-only-do-not-trust
+      # Turbo telemetry is noise in CI logs.
+      TURBO_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          # pnpm store gets cached by setup-node when cache: pnpm is set.
+          cache: pnpm
+
+      # Turbo's filesystem cache so re-runs / second jobs are fast.
+      # Keyed by lockfile so dep changes invalidate cleanly.
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      # Upload coverage / vitest reports if any package produced them.
+      # `if-no-files-found: ignore` keeps this a no-op until a package opts in.
+      - name: Upload coverage reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.run_id }}
+          path: |
+            **/coverage/**
+            **/.vitest-reports/**
+          if-no-files-found: ignore
+          retention-days: 7

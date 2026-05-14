@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./packages/config-typescript/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@siteops/shared": ["./packages/shared/src/index.ts"],
+      "@siteops/shared/*": ["./packages/shared/src/*"],
+      "@siteops/db": ["./packages/db/src/index.ts"],
+      "@siteops/db/*": ["./packages/db/src/*"],
+      "@siteops/services": ["./packages/services/src/index.ts"],
+      "@siteops/services/*": ["./packages/services/src/*"],
+      "@siteops/integrations": ["./packages/integrations/src/index.ts"],
+      "@siteops/integrations/*": ["./packages/integrations/src/*"]
+    }
+  }
+}

@@ -1,0 +1,52 @@
+# siteops — Caddy reverse proxy (production).
+#
+# The compose stack always publishes Caddy on whatever ports are mapped via
+# CADDY_HTTP_PORT / CADDY_HTTPS_PORT. To keep both local prod-like runs
+# (`SITEOPS_DOMAIN=localhost`) and real deployments working with the same
+# file, we split into two site blocks:
+#
+#   1) `:80` — always-on HTTP entry. Reverse-proxies `/` to the web app.
+#      `auto_https disable_redirects` makes sure Caddy does NOT force a
+#      HTTP→HTTPS redirect for this listener, so `curl http://host/healthz`
+#      works against `localhost` (no cert) and against real hosts before
+#      ACME has finished.
+#
+#   2) `{$SITEOPS_DOMAIN}` — kicks in when SITEOPS_DOMAIN is a real public
+#      hostname. Caddy then provisions Let's Encrypt automatically and
+#      serves the same upstream over HTTPS. When SITEOPS_DOMAIN=localhost
+#      Caddy uses an internal self-signed cert (`tls internal`).
+#
+# Both blocks share the same upstream snippet via `import siteops_upstream`.
+
+{
+	admin 127.0.0.1:2019
+	email {$CADDY_ACME_EMAIL:admin@example.com}
+	auto_https disable_redirects
+}
+
+(siteops_upstream) {
+	encode zstd gzip
+
+	handle /caddy-healthz {
+		respond "ok" 200
+	}
+
+	reverse_proxy web:3000 {
+		health_uri      /healthz
+		health_interval 10s
+		health_timeout  3s
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+:80 {
+	import siteops_upstream
+}
+
+{$SITEOPS_DOMAIN:localhost} {
+	import siteops_upstream
+}

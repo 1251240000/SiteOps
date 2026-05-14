@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local", ".env.example"],
+  "globalEnv": [
+    "NODE_ENV",
+    "LOG_LEVEL",
+    "CI",
+    "TURBO_TELEMETRY_DISABLED",
+    "NEXT_TELEMETRY_DISABLED"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["DATABASE_URL", "REDIS_URL", "AUTH_SECRET", "AUTH_URL", "LOGIN_RATE_LIMIT_PER_MIN"]
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "env": ["DATABASE_URL", "REDIS_URL", "AUTH_SECRET"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

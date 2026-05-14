@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "deployments_provider_remote_uk" ON "deployments" USING btree ("provider","provider_deployment_id") WHERE "deployments"."provider" IS NOT NULL AND "deployments"."provider_deployment_id" IS NOT NULL;

@@ -1,0 +1,98 @@
+# syntax=docker/dockerfile:1.7
+#
+# siteops — worker image (BullMQ scheduler + processors)
+#
+# Build context MUST be the repo root, e.g.:
+#   docker build -f infra/Dockerfile.worker -t siteops/worker .
+#
+# Includes Chromium so Lighthouse jobs (T14) can run inside the container.
+# The worker code itself must pass `--no-sandbox` / disable the sandbox when
+# launching Chromium under root in Docker; that lives in the job processor.
+
+ARG NODE_VERSION=20-alpine
+ARG PNPM_VERSION=9.12.3
+# Build-time mirrors (override to upstream when building outside CN):
+#   --build-arg ALPINE_MIRROR=https://dl-cdn.alpinelinux.org/alpine
+#   --build-arg NPM_REGISTRY=https://registry.npmjs.org
+ARG ALPINE_MIRROR=https://mirrors.aliyun.com/alpine
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+
+# -----------------------------------------------------------------------------
+# 1) deps
+# -----------------------------------------------------------------------------
+FROM node:${NODE_VERSION} AS deps
+ARG PNPM_VERSION
+ARG ALPINE_MIRROR
+ARG NPM_REGISTRY
+ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY}
+RUN sed -i "s|https\?://dl-cdn.alpinelinux.org/alpine|${ALPINE_MIRROR}|g" /etc/apk/repositories \
+ && apk add --no-cache libc6-compat \
+ && corepack enable \
+ && corepack prepare pnpm@${PNPM_VERSION} --activate \
+ && pnpm config set registry "${NPM_REGISTRY}"
+WORKDIR /repo
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
+
+COPY apps/web/package.json                  apps/web/package.json
+COPY apps/worker/package.json               apps/worker/package.json
+COPY packages/db/package.json               packages/db/package.json
+COPY packages/services/package.json         packages/services/package.json
+COPY packages/integrations/package.json     packages/integrations/package.json
+COPY packages/shared/package.json           packages/shared/package.json
+COPY packages/config-eslint/package.json    packages/config-eslint/package.json
+COPY packages/config-typescript/package.json packages/config-typescript/package.json
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm-store \
+    pnpm config set store-dir /pnpm-store \
+ && pnpm install --frozen-lockfile
+
+# -----------------------------------------------------------------------------
+# 2) build
+# -----------------------------------------------------------------------------
+FROM deps AS build
+WORKDIR /repo
+
+COPY . .
+
+RUN pnpm --filter @siteops/worker... build
+
+# -----------------------------------------------------------------------------
+# 3) runtime
+# -----------------------------------------------------------------------------
+FROM node:${NODE_VERSION} AS runtime
+ARG ALPINE_MIRROR
+
+# Chromium + the system libs Lighthouse / Puppeteer need.
+# Keeping this in the runtime stage so the placeholder image already has
+# everything T14 will require; no rebuild needed when the real worker lands.
+RUN sed -i "s|https\?://dl-cdn.alpinelinux.org/alpine|${ALPINE_MIRROR}|g" /etc/apk/repositories \
+ && apk add --no-cache \
+      tini \
+      chromium \
+      nss \
+      freetype \
+      freetype-dev \
+      harfbuzz \
+      ca-certificates \
+      ttf-freefont \
+      dumb-init
+
+# Tell Puppeteer / Lighthouse to use the system Chromium.
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    CHROME_PATH=/usr/bin/chromium-browser
+
+WORKDIR /app
+
+# T02 placeholder keepalive — replaced by `apps/worker/dist/index.js`
+# (the real BullMQ entrypoint) in T11.
+COPY --from=build /repo/apps/worker/runner.placeholder.cjs /app/runner.js
+
+ENV NODE_ENV=production
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD pgrep -f "node /app/runner.js" >/dev/null || exit 1
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "/app/runner.js"]

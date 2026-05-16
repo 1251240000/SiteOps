@@ -1,6 +1,7 @@
 'use client';
 
 import { type LucideIcon, RefreshCw, Plug } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
@@ -39,8 +40,8 @@ export interface IntegrationCardProps {
   envReady?: boolean;
 }
 
-function fmtTs(iso: string | null): string {
-  if (!iso) return 'never';
+function fmtTs(iso: string | null, neverLabel: string): string {
+  if (!iso) return neverLabel;
   try {
     return new Date(iso).toLocaleString();
   } catch {
@@ -58,6 +59,7 @@ export function IntegrationCard({
   body,
   envReady,
 }: IntegrationCardProps) {
+  const t = useTranslations('pages.integrations.card');
   const ready =
     envReady ??
     (status.hasToken || status.hasOAuthClient || Boolean(status.hasAccountName) || false);
@@ -68,7 +70,7 @@ export function IntegrationCard({
     setBusy('test');
     try {
       await api.post(endpoints.test, {});
-      toast.success(`${name}: connection OK`);
+      toast.success(t('connectionOk', { name }));
     } catch (err) {
       toast.error(`${name}: ${(err as ApiError).message}`);
     } finally {
@@ -82,7 +84,7 @@ export function IntegrationCard({
     try {
       const res = (await api.post(endpoints.sync, {})) as ApiSuccess<unknown>;
       void res;
-      toast.success(`${name}: sync started`);
+      toast.success(t('syncStarted', { name }));
     } catch (err) {
       toast.error(`${name}: ${(err as ApiError).message}`);
     } finally {
@@ -116,16 +118,16 @@ export function IntegrationCard({
             </div>
           </div>
           <Badge variant={ready ? 'success' : 'muted'}>
-            {ready ? 'configured' : 'not configured'}
+            {ready ? t('configured') : t('notConfigured')}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {configHint}
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-          <dt className="text-muted-foreground">last sync</dt>
-          <dd className="text-foreground">{fmtTs(status.lastSyncedAt)}</dd>
-          <dt className="text-muted-foreground">last error</dt>
+          <dt className="text-muted-foreground">{t('lastSync')}</dt>
+          <dd className="text-foreground">{fmtTs(status.lastSyncedAt, t('never'))}</dd>
+          <dt className="text-muted-foreground">{t('lastError')}</dt>
           <dd className="text-foreground">
             {status.lastError ? (
               <span className="font-mono text-destructive">{status.lastError}</span>
@@ -133,7 +135,7 @@ export function IntegrationCard({
               '—'
             )}
           </dd>
-          <dt className="text-muted-foreground">sites tracked</dt>
+          <dt className="text-muted-foreground">{t('sitesTracked')}</dt>
           <dd className="text-foreground">{status.perSite.length}</dd>
         </dl>
         {body}
@@ -146,7 +148,7 @@ export function IntegrationCard({
               disabled={busy !== null || !ready}
             >
               <Plug className="mr-1 size-3.5" />
-              Test
+              {t('test')}
             </Button>
           ) : null}
           {endpoints.authUrl ? (
@@ -156,13 +158,13 @@ export function IntegrationCard({
               onClick={() => void startOAuth()}
               disabled={busy !== null || !ready}
             >
-              Connect
+              {t('connect')}
             </Button>
           ) : null}
           {endpoints.sync ? (
             <Button size="sm" onClick={() => void runSync()} disabled={busy !== null || !ready}>
               <RefreshCw className={`mr-1 size-3.5 ${busy === 'sync' ? 'animate-spin' : ''}`} />
-              Sync now
+              {t('syncNow')}
             </Button>
           ) : null}
         </div>

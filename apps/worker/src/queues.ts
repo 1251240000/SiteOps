@@ -13,6 +13,7 @@ import type { Logger } from '@siteops/shared';
 
 export type QueueName =
   | 'uptime-check'
+  | 'uptime-tick'
   | 'ssl-domain-expiry'
   | 'seo-audit'
   | 'lighthouse-run'
@@ -26,6 +27,7 @@ export type QueueName =
 
 export const ALL_QUEUES: ReadonlyArray<QueueName> = [
   'uptime-check',
+  'uptime-tick',
   'ssl-domain-expiry',
   'seo-audit',
   'lighthouse-run',

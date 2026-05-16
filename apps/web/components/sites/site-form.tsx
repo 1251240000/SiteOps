@@ -2,9 +2,10 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useMemo, useState } from 'react';
+import { useForm, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ import {
   type UpdateSiteInput,
 } from '@siteops/shared/schemas';
 import { api, ApiError } from '@/lib/api-client';
+import { translateFormErrors } from '@/lib/i18n/zod-form-errors';
 import { sitesKeys, type Site } from '@/lib/queries/sites';
 
 const NULL_VALUE = '__none__';
@@ -75,14 +77,28 @@ const blankDefaults: FormFields = {
 export function SiteForm(props: SiteFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslations('pages.sites.form');
+  const tCommon = useTranslations('common');
+  const tFormErrors = useTranslations('common.formErrors');
+  const tEnumStatus = useTranslations('enums.siteStatus');
+  const tEnumType = useTranslations('enums.siteType');
   const [submitting, setSubmitting] = useState(false);
 
   const schema = props.mode === 'create' ? createSiteSchema : updateSiteSchema;
   const defaults: FormFields =
     props.mode === 'edit' ? siteToFormDefaults(props.initial) : blankDefaults;
 
+  const resolver = useMemo<Resolver<FormFields>>(() => {
+    const base = zodResolver(schema) as Resolver<FormFields>;
+    return async (values, context, options) => {
+      const result = await base(values, context, options);
+      translateFormErrors(result.errors as Record<string, unknown> | undefined, tFormErrors);
+      return result;
+    };
+  }, [schema, tFormErrors]);
+
   const form = useForm<FormFields>({
-    resolver: zodResolver(schema) as never,
+    resolver,
     defaultValues: defaults,
     mode: 'onBlur',
   });
@@ -106,20 +122,20 @@ export function SiteForm(props: SiteFormProps) {
     try {
       if (props.mode === 'create') {
         const { data: site } = await api.post<Site>('/sites', values);
-        toast.success(`Site "${site.name}" created`);
+        toast.success(t('createdToast', { name: site.name }));
         await queryClient.invalidateQueries({ queryKey: sitesKeys.lists() });
         router.push(`/sites/${site.id}`);
       } else {
         const patch: UpdateSiteInput = values;
         const { data: site } = await api.patch<Site>(`/sites/${props.initial.id}`, patch);
-        toast.success(`Site "${site.name}" updated`);
+        toast.success(t('updatedToast', { name: site.name }));
         await queryClient.invalidateQueries({ queryKey: sitesKeys.lists() });
         await queryClient.invalidateQueries({
           queryKey: sitesKeys.detail(props.initial.id),
         });
       }
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Save failed';
+      const message = err instanceof ApiError ? err.message : tCommon('saveFailed');
       toast.error(message, {
         description: err instanceof ApiError && err.requestId ? `Req ${err.requestId}` : undefined,
       });
@@ -132,16 +148,16 @@ export function SiteForm(props: SiteFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate aria-busy={submitting}>
       <Card>
         <CardHeader>
-          <CardTitle>Basics</CardTitle>
+          <CardTitle>{t('sectionBasics')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <Field label="Name" error={errors.name?.message}>
+          <Field label={t('fieldName')} error={errors.name?.message}>
             <Input {...register('name')} autoFocus />
           </Field>
-          <Field label="Primary URL" error={errors.primaryUrl?.message}>
-            <Input {...register('primaryUrl')} placeholder="https://example.com" />
+          <Field label={t('fieldPrimaryUrl')} error={errors.primaryUrl?.message}>
+            <Input {...register('primaryUrl')} placeholder={t('fieldPrimaryUrlPlaceholder')} />
           </Field>
-          <Field label="Site type" error={errors.siteType?.message}>
+          <Field label={t('fieldSiteType')} error={errors.siteType?.message}>
             <Select
               value={watch('siteType')}
               onValueChange={(v) =>
@@ -152,15 +168,15 @@ export function SiteForm(props: SiteFormProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SITE_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
+                {SITE_TYPES.map((siteTypeKey) => (
+                  <SelectItem key={siteTypeKey} value={siteTypeKey}>
+                    {tEnumType(siteTypeKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Status" error={errors.status?.message}>
+          <Field label={t('fieldStatus')} error={errors.status?.message}>
             <Select
               value={watch('status')}
               onValueChange={(v) =>
@@ -171,26 +187,36 @@ export function SiteForm(props: SiteFormProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SITE_STATUS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
+                {SITE_STATUS.map((statusKey) => (
+                  <SelectItem key={statusKey} value={statusKey}>
+                    {tEnumStatus(statusKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Target country (ISO-2)" error={errors.targetCountry?.message}>
-            <Input {...register('targetCountry')} placeholder="US" />
+          <Field label={t('fieldTargetCountry')} error={errors.targetCountry?.message}>
+            <Input
+              {...register('targetCountry')}
+              placeholder={t('fieldTargetCountryPlaceholder')}
+            />
           </Field>
-          <Field label="Target language" error={errors.targetLanguage?.message}>
-            <Input {...register('targetLanguage')} placeholder="en" />
+          <Field label={t('fieldTargetLanguage')} error={errors.targetLanguage?.message}>
+            <Input
+              {...register('targetLanguage')}
+              placeholder={t('fieldTargetLanguagePlaceholder')}
+            />
           </Field>
-          <Field label="Tags" error={errors.tags?.message as string | undefined} fullWidth>
+          <Field
+            label={t('fieldTags')}
+            error={errors.tags?.message as string | undefined}
+            fullWidth
+          >
             <Input
               value={tagsDraft}
               onChange={(e) => setTagsDraft(e.target.value)}
               onBlur={onTagsBlur}
-              placeholder="comma, separated, tags"
+              placeholder={t('fieldTagsPlaceholder')}
             />
           </Field>
         </CardContent>
@@ -198,10 +224,10 @@ export function SiteForm(props: SiteFormProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tech stack &amp; repo</CardTitle>
+          <CardTitle>{t('sectionTechRepo')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <Field label="Framework" error={undefined}>
+          <Field label={t('fieldFramework')} error={undefined}>
             <Input
               defaultValue={defaults.techStack?.framework ?? ''}
               onChange={(e) =>
@@ -216,7 +242,7 @@ export function SiteForm(props: SiteFormProps) {
               }
             />
           </Field>
-          <Field label="Hosting" error={undefined}>
+          <Field label={t('fieldHosting')} error={undefined}>
             <Input
               defaultValue={defaults.techStack?.hosting ?? ''}
               onChange={(e) =>
@@ -231,16 +257,17 @@ export function SiteForm(props: SiteFormProps) {
               }
             />
           </Field>
-          <Field label="Repository URL" error={errors.repoUrl?.message}>
-            <Input {...register('repoUrl')} placeholder="https://github.com/org/repo" />
+          <Field label={t('fieldRepoUrl')} error={errors.repoUrl?.message}>
+            <Input {...register('repoUrl')} placeholder={t('fieldRepoUrlPlaceholder')} />
           </Field>
-          <Field label="Repository provider" error={errors.repoProvider?.message}>
+          <Field label={t('fieldRepoProvider')} error={errors.repoProvider?.message}>
             <NullableEnumSelect
               value={watch('repoProvider')}
               options={REPO_PROVIDERS}
               onChange={(v) =>
                 setValue('repoProvider', v as FormFields['repoProvider'], { shouldDirty: true })
               }
+              noneLabel={tCommon('noneOption')}
             />
           </Field>
         </CardContent>
@@ -248,16 +275,16 @@ export function SiteForm(props: SiteFormProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Integrations</CardTitle>
+          <CardTitle>{t('sectionIntegrations')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <Field label="Cloudflare account id" error={errors.cfAccountId?.message}>
+          <Field label={t('fieldCfAccountId')} error={errors.cfAccountId?.message}>
             <Input {...register('cfAccountId')} />
           </Field>
-          <Field label="Cloudflare Pages project" error={errors.cfPagesProject?.message}>
+          <Field label={t('fieldCfPagesProject')} error={errors.cfPagesProject?.message}>
             <Input {...register('cfPagesProject')} />
           </Field>
-          <Field label="Analytics provider" error={errors.analyticsProvider?.message}>
+          <Field label={t('fieldAnalyticsProvider')} error={errors.analyticsProvider?.message}>
             <NullableEnumSelect
               value={watch('analyticsProvider')}
               options={ANALYTICS_PROVIDERS}
@@ -266,18 +293,28 @@ export function SiteForm(props: SiteFormProps) {
                   shouldDirty: true,
                 })
               }
+              noneLabel={tCommon('noneOption')}
             />
           </Field>
-          <Field label="Analytics id" error={errors.analyticsId?.message}>
-            <Input {...register('analyticsId')} placeholder="G-XXXXXXXX" />
+          <Field label={t('fieldAnalyticsId')} error={errors.analyticsId?.message}>
+            <Input {...register('analyticsId')} placeholder={t('fieldAnalyticsIdPlaceholder')} />
           </Field>
-          <Field label="Search Console property" error={errors.searchConsoleProperty?.message}>
-            <Input {...register('searchConsoleProperty')} placeholder="sc-domain:example.com" />
+          <Field
+            label={t('fieldSearchConsoleProperty')}
+            error={errors.searchConsoleProperty?.message}
+          >
+            <Input
+              {...register('searchConsoleProperty')}
+              placeholder={t('fieldSearchConsolePropertyPlaceholder')}
+            />
           </Field>
-          <Field label="AdSense publisher id" error={errors.adsensePublisherId?.message}>
-            <Input {...register('adsensePublisherId')} placeholder="pub-XXXXXXX" />
+          <Field label={t('fieldAdsensePublisherId')} error={errors.adsensePublisherId?.message}>
+            <Input
+              {...register('adsensePublisherId')}
+              placeholder={t('fieldAdsensePublisherIdPlaceholder')}
+            />
           </Field>
-          <Field label="AdSense status" error={errors.adsenseStatus?.message}>
+          <Field label={t('fieldAdsenseStatus')} error={errors.adsenseStatus?.message}>
             <NullableEnumSelect
               value={watch('adsenseStatus')}
               options={ADSENSE_STATUS}
@@ -286,6 +323,7 @@ export function SiteForm(props: SiteFormProps) {
                   shouldDirty: true,
                 })
               }
+              noneLabel={tCommon('noneOption')}
             />
           </Field>
         </CardContent>
@@ -293,7 +331,7 @@ export function SiteForm(props: SiteFormProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Notes</CardTitle>
+          <CardTitle>{t('sectionNotes')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea rows={4} {...register('notes')} />
@@ -302,10 +340,14 @@ export function SiteForm(props: SiteFormProps) {
 
       <div className="flex items-center justify-end gap-3">
         <Button type="button" variant="ghost" onClick={() => router.back()} disabled={submitting}>
-          Cancel
+          {tCommon('cancel')}
         </Button>
         <Button type="submit" disabled={submitting}>
-          {submitting ? 'Saving…' : props.mode === 'create' ? 'Create site' : 'Save changes'}
+          {submitting
+            ? tCommon('saving')
+            : props.mode === 'create'
+              ? t('submitCreate')
+              : t('submitUpdate')}
         </Button>
       </div>
     </form>
@@ -336,10 +378,12 @@ function NullableEnumSelect({
   value,
   options,
   onChange,
+  noneLabel,
 }: {
   value: string | undefined;
   options: readonly string[];
   onChange: (value: string | undefined) => void;
+  noneLabel: string;
 }) {
   return (
     <Select
@@ -347,10 +391,10 @@ function NullableEnumSelect({
       onValueChange={(v) => onChange(v === NULL_VALUE ? undefined : v)}
     >
       <SelectTrigger>
-        <SelectValue placeholder="None" />
+        <SelectValue placeholder={noneLabel} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={NULL_VALUE}>None</SelectItem>
+        <SelectItem value={NULL_VALUE}>{noneLabel}</SelectItem>
         {options.map((opt) => (
           <SelectItem key={opt} value={opt}>
             {opt}

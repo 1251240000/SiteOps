@@ -1,4 +1,5 @@
 import { Settings as SettingsIcon } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 
 import { EmptyState } from '@/components/common/empty-state';
 import { PageHeader } from '@/components/common/page-header';
@@ -8,22 +9,26 @@ import { auth } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
-  const session = await auth();
+  const [session, t, tTopbar] = await Promise.all([
+    auth(),
+    getTranslations('pages.settings'),
+    getTranslations('topbar'),
+  ]);
   const user = session?.user;
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="Profile, API keys, and notification preferences." />
+      <PageHeader title={t('title')} description={t('description')} />
 
       <section className="grid gap-4 sm:grid-cols-2">
-        <StatCard label="Signed-in admin" value={user?.email ?? '—'} hint={user?.name ?? 'Admin'} />
-        <StatCard label="Theme" value="Auto" hint="Pick light/dark from the top-right switcher." />
+        <StatCard
+          label={t('signedInAdmin')}
+          value={user?.email ?? '—'}
+          hint={user?.name ?? tTopbar('accountDefaultName')}
+        />
+        <StatCard label={t('themeLabel')} value={t('themeValue')} hint={t('themeHint')} />
       </section>
 
-      <EmptyState
-        icon={SettingsIcon}
-        title="More settings coming soon"
-        description="API key management lands together with T25 (Agent task queue) and the notification channels page is part of T16."
-      />
+      <EmptyState icon={SettingsIcon} title={t('emptyTitle')} description={t('emptyDescription')} />
     </div>
   );
 }

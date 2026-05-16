@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Star, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -27,6 +28,8 @@ import { ExpiryCell } from './expiry-cell';
 
 export function DomainCard({ siteId }: { siteId: string }) {
   const queryClient = useQueryClient();
+  const t = useTranslations('pages.domains.card');
+  const tCommon = useTranslations('common');
   const [addOpen, setAddOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<DomainView | null>(null);
 
@@ -44,7 +47,7 @@ export function DomainCard({ siteId }: { siteId: string }) {
       return data;
     },
     onSuccess: async (data) => {
-      toast.success(`Primary domain set to ${data.domain}`);
+      toast.success(t('primarySetToast', { domain: data.domain }));
       await invalidateAll();
     },
     onError: (err: ApiError) => toast.error(err.message),
@@ -56,7 +59,7 @@ export function DomainCard({ siteId }: { siteId: string }) {
       return data;
     },
     onSuccess: async (data) => {
-      toast.success(`Removed ${data.domain}`);
+      toast.success(t('removedToast', { domain: data.domain }));
       setConfirmDelete(null);
       await invalidateAll();
     },
@@ -74,18 +77,16 @@ export function DomainCard({ siteId }: { siteId: string }) {
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Domains</CardTitle>
+          <CardTitle className="text-base">{t('title')}</CardTitle>
           <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
-            <Plus className="size-4" /> Add domain
+            <Plus className="size-4" /> {t('add')}
           </Button>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-muted-foreground">{t('loading')}</p>
           ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No domains attached yet. Add the primary domain that visitors reach the site on.
-            </p>
+            <p className="text-sm text-muted-foreground">{t('empty')}</p>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {items.map((d) => {
@@ -98,12 +99,15 @@ export function DomainCard({ siteId }: { siteId: string }) {
                         {d.domain}
                         {d.isPrimary ? (
                           <Badge variant="success" className="gap-1">
-                            <Star className="size-3" /> Primary
+                            <Star className="size-3" /> {t('primaryBadge')}
                           </Badge>
                         ) : null}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        Registrar: {d.registrar ?? '—'} · DNS: {d.dnsProvider ?? '—'}
+                        {t('registrarLine', {
+                          registrar: d.registrar ?? '—',
+                          dns: d.dnsProvider ?? '—',
+                        })}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
@@ -116,13 +120,13 @@ export function DomainCard({ siteId }: { siteId: string }) {
                             disabled={setPrimaryMutation.isPending}
                             onClick={() => setPrimaryMutation.mutate(d.id)}
                           >
-                            Make primary
+                            {t('makePrimary')}
                           </Button>
                         ) : null}
                         <Button
                           size="icon"
                           variant="ghost"
-                          aria-label={`Delete ${d.domain}`}
+                          aria-label={t('deleteAriaLabel', { domain: d.domain })}
                           onClick={() => {
                             if (onlyOne || isPrimaryDelete) setConfirmDelete(d);
                             else deleteMutation.mutate(d.id);
@@ -152,15 +156,19 @@ export function DomainCard({ siteId }: { siteId: string }) {
       <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{confirmDelete?.domain}”?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t('deleteDialogTitle', { domain: confirmDelete?.domain ?? '' })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmDelete?.isPrimary
-                ? 'This is the current primary domain. Deleting it will leave the site without a primary — make sure another domain is promoted afterwards.'
-                : 'This is the only domain attached to this site. Deleting it leaves the site without a domain.'}
+                ? t('deleteDialogPrimaryWarning')
+                : t('deleteDialogOnlyOneWarning')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              {tCommon('cancel')}
+            </AlertDialogCancel>
             <AlertDialogAction
               disabled={deleteMutation.isPending}
               onClick={(e) => {
@@ -168,7 +176,7 @@ export function DomainCard({ siteId }: { siteId: string }) {
                 if (confirmDelete) deleteMutation.mutate(confirmDelete.id);
               }}
             >
-              {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+              {deleteMutation.isPending ? t('deleting') : t('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -196,6 +204,9 @@ function AddDomainDialog({
   const [isPrimary, setIsPrimary] = useState(!existingPrimary);
   const [submitting, setSubmitting] = useState(false);
 
+  const t = useTranslations('pages.domains.card.addDialog');
+  const tCommon = useTranslations('common');
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
@@ -206,14 +217,14 @@ function AddDomainDialog({
         expiresAt: expiresAt || undefined,
         isPrimary,
       });
-      toast.success(`Added ${domain}`);
+      toast.success(t('addedToast', { domain }));
       await onAdded();
       onOpenChange(false);
       setDomain('');
       setRegistrar('');
       setExpiresAt('');
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Add failed';
+      const message = err instanceof ApiError ? err.message : t('failedToast');
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -225,34 +236,32 @@ function AddDomainDialog({
       <AlertDialogContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <AlertDialogHeader>
-            <AlertDialogTitle>Add domain</AlertDialogTitle>
-            <AlertDialogDescription>
-              Paste anything domain-shaped — we&#39;ll normalise scheme / path / port away.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t('title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('description')}</AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="add-domain">Domain</Label>
+            <Label htmlFor="add-domain">{t('fieldDomain')}</Label>
             <Input
               id="add-domain"
               required
               autoFocus
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
-              placeholder="example.com"
+              placeholder={t('fieldDomainPlaceholder')}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="add-registrar">Registrar</Label>
+              <Label htmlFor="add-registrar">{t('fieldRegistrar')}</Label>
               <Input
                 id="add-registrar"
                 value={registrar}
                 onChange={(e) => setRegistrar(e.target.value)}
-                placeholder="Cloudflare"
+                placeholder={t('fieldRegistrarPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="add-expires">Expires</Label>
+              <Label htmlFor="add-expires">{t('fieldExpires')}</Label>
               <Input
                 id="add-expires"
                 type="date"
@@ -268,14 +277,14 @@ function AddDomainDialog({
               onChange={(e) => setIsPrimary(e.target.checked)}
               className="h-4 w-4 rounded border-input"
             />
-            Set as primary
+            {t('setPrimary')}
           </label>
           <AlertDialogFooter>
             <AlertDialogCancel type="button" disabled={submitting}>
-              Cancel
+              {tCommon('cancel')}
             </AlertDialogCancel>
             <AlertDialogAction type="submit" disabled={submitting}>
-              {submitting ? 'Adding…' : 'Add domain'}
+              {submitting ? t('submitting') : t('submit')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </form>

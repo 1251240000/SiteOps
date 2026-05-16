@@ -11,6 +11,8 @@
  */
 import type { Worker } from 'bullmq';
 
+import { lighthouse as lighthouseIntegration } from '@siteops/integrations';
+
 import { getWorkerEnv } from './env.js';
 import { getWorkerLogger } from './logger.js';
 import { ALL_QUEUES, closeQueues } from './queues.js';
@@ -44,7 +46,32 @@ async function main(): Promise<void> {
   const logger = getWorkerLogger();
   const config: WorkerConnectionConfig = { redisUrl: env.REDIS_URL, logger };
 
-  logger.info({ event: 'worker.boot', queues: [...ALL_QUEUES] }, 'siteops worker starting');
+  logger.info(
+    { event: 'worker.boot', queues: [...ALL_QUEUES], lighthouseRunner: env.LIGHTHOUSE_RUNNER },
+    'siteops worker starting',
+  );
+
+  if (env.LIGHTHOUSE_RUNNER === 'real') {
+    try {
+      lighthouseIntegration.registerLighthouseRunner(
+        lighthouseIntegration.createRealLighthouseRunner(),
+      );
+      logger.info(
+        { event: 'lighthouse.runner', mode: 'real' },
+        'real Lighthouse runner registered',
+      );
+    } catch (err) {
+      // Don't crash boot — fall back to the stub so the rest of the worker
+      // (uptime, SSL, integrations, alerts) still ships data.
+      logger.error(
+        {
+          event: 'lighthouse.runner_init_failed',
+          err: { message: err instanceof Error ? err.message : String(err) },
+        },
+        'real Lighthouse runner init failed; falling back to stub',
+      );
+    }
+  }
 
   // Per-queue consumers.
   workers.push(startUptimeWorker(config));

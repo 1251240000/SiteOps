@@ -1,23 +1,23 @@
 'use client';
 
 import { CalendarDays } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { parseAsString, useQueryState } from 'nuqs';
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { resolveRange } from '@/lib/date-range';
 import { cn } from '@/lib/utils';
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-const PRESETS: ReadonlyArray<{ key: '7d' | '30d' | '90d'; label: string; days: number }> = [
-  { key: '7d', label: '7 d', days: 7 },
-  { key: '30d', label: '30 d', days: 30 },
-  { key: '90d', label: '90 d', days: 90 },
+const PRESETS: ReadonlyArray<{ key: '7d' | '30d' | '90d'; days: number }> = [
+  { key: '7d', days: 7 },
+  { key: '30d', days: 30 },
+  { key: '90d', days: 90 },
 ];
-
-export type ResolvedRange = { from: string; to: string };
 
 function isoToday(): string {
   const d = new Date();
@@ -39,20 +39,6 @@ function isoMinusDays(base: string, days: number): string {
 }
 
 /**
- * Resolve `?from`/`?to` URL params with a default 30-day window. Pure
- * function exported so server components and tests can share the logic.
- */
-export function resolveRange(
-  from: string | null | undefined,
-  to: string | null | undefined,
-  defaultDays = 30,
-): ResolvedRange {
-  const safeTo = to && ISO_RE.test(to) ? to : isoToday();
-  const safeFrom = from && ISO_RE.test(from) ? from : isoMinusDays(safeTo, defaultDays - 1);
-  return { from: safeFrom, to: safeTo };
-}
-
-/**
  * URL-state-driven date range picker. Used by `/traffic`, `/sites/[id]/traffic`,
  * and (later) the revenue / ROI dashboards in T23 / T24.
  *
@@ -61,6 +47,7 @@ export function resolveRange(
  * leaving the page.
  */
 export function DateRangePicker({ defaultDays = 30 }: { defaultDays?: number } = {}) {
+  const t = useTranslations('pages.traffic.rangePicker');
   const [from, setFrom] = useQueryState('from', parseAsString);
   const [to, setTo] = useQueryState('to', parseAsString);
 
@@ -103,15 +90,15 @@ export function DateRangePicker({ defaultDays = 30 }: { defaultDays?: number } =
 
   return (
     <section
-      aria-label="Date range"
+      aria-label={t('ariaLabel')}
       className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-end md:gap-4"
     >
       <div className="flex items-center gap-2 text-xs text-muted-foreground md:pb-2">
         <CalendarDays className="size-4" aria-hidden />
-        <span>Range</span>
+        <span>{t('rangeLabel')}</span>
       </div>
 
-      <div role="group" aria-label="Quick presets" className="flex flex-wrap gap-1">
+      <div role="group" aria-label={t('presetsAriaLabel')} className="flex flex-wrap gap-1">
         {PRESETS.map((p) => {
           const active = activePreset === p.key;
           return (
@@ -127,7 +114,7 @@ export function DateRangePicker({ defaultDays = 30 }: { defaultDays?: number } =
                   : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
               )}
             >
-              {p.label}
+              {t('presetDays', { days: p.days })}
             </button>
           );
         })}
@@ -136,7 +123,7 @@ export function DateRangePicker({ defaultDays = 30 }: { defaultDays?: number } =
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
         <div className="space-y-1">
           <Label htmlFor="range-from" className="text-xs text-muted-foreground">
-            From
+            {t('from')}
           </Label>
           <Input
             id="range-from"
@@ -150,7 +137,7 @@ export function DateRangePicker({ defaultDays = 30 }: { defaultDays?: number } =
         </div>
         <div className="space-y-1">
           <Label htmlFor="range-to" className="text-xs text-muted-foreground">
-            To
+            {t('to')}
           </Label>
           <Input
             id="range-to"

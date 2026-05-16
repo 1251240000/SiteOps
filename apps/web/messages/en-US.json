@@ -1,0 +1,841 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "edit": "Edit",
+    "delete": "Delete",
+    "loading": "Loading…",
+    "retry": "Retry",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "noneOption": "None",
+    "saveFailed": "Save failed",
+    "saving": "Saving…",
+    "requestId": "Req {id}",
+    "pagination": {
+      "previous": "Previous page",
+      "next": "Next page",
+      "page": "Page <strong>{page}</strong> of <strong>{total}</strong>",
+      "showing": "Showing {from}–{to} of {total}",
+      "noRows": "No rows"
+    },
+    "sortBy": "Sort by {column}",
+    "noResults": "No results.",
+    "expiry": {
+      "daysAgo": "{days, plural, =1 {1 day ago} other {# days ago}}",
+      "today": "today",
+      "inDays": "{days, plural, =1 {in 1 day} other {in # days}}"
+    },
+    "formErrors": {
+      "required": "Required",
+      "invalidUrl": "Must be a valid URL",
+      "invalidUuid": "Must be a valid UUID",
+      "invalidString": "Invalid value",
+      "invalidEnum": "Choose a valid option",
+      "tooShort": "Must be at least {min} characters",
+      "tooLong": "Must be at most {max} characters",
+      "mustUseHttps": "Must use https",
+      "mustUseHttpHttps": "Must use http or https",
+      "hostNotPublic": "Host is not publicly addressable",
+      "hostPrivateIp": "Host is a private IP range",
+      "tagsAlphanumeric": "Tags must be alphanumeric / dashes",
+      "mustBeKebabCase": "Must be lowercase kebab-case",
+      "mustBeIso8601": "Must be ISO-8601 with timezone",
+      "mustBeIsoDate": "Must be YYYY-MM-DD",
+      "mustBeIso4217": "Must be ISO-4217 (3 uppercase letters)",
+      "invalidDomain": "Invalid domain"
+    }
+  },
+  "enums": {
+    "siteStatus": {
+      "active": "Active",
+      "paused": "Paused",
+      "archived": "Archived"
+    },
+    "siteType": {
+      "directory": "Directory",
+      "tool": "Tool",
+      "content": "Content",
+      "forum": "Forum",
+      "landing": "Landing"
+    },
+    "deploymentStatus": {
+      "queued": "Queued",
+      "building": "Building",
+      "success": "Success",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "deploymentProvider": {
+      "cloudflare_pages": "Cloudflare Pages",
+      "github_pages": "GitHub Pages",
+      "vercel": "Vercel",
+      "netlify": "Netlify",
+      "manual": "Manual"
+    },
+    "errorLevel": {
+      "error": "Error",
+      "warning": "Warning"
+    },
+    "severity": {
+      "info": "Info",
+      "warning": "Warning",
+      "error": "Error",
+      "critical": "Critical"
+    },
+    "auditStatus": {
+      "success": "Success",
+      "running": "Running",
+      "failed": "Failed",
+      "unknown": "Unknown"
+    }
+  },
+  "auth": {
+    "signInTitle": "Sign in to siteops",
+    "signInDescription": "Single-admin login. See <code>.env.example</code> for the seed user.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "errorInvalid": "Invalid email or password.",
+    "errorGeneric": "Unable to sign in. Please try again.",
+    "formAriaLabel": "Sign in"
+  },
+  "nav": {
+    "overview": "Overview",
+    "sites": "Sites",
+    "traffic": "Traffic",
+    "revenue": "Revenue",
+    "roi": "ROI",
+    "domains": "Domains",
+    "deployments": "Deployments",
+    "errors": "Errors",
+    "alerts": "Alerts",
+    "integrations": "Integrations",
+    "settings": "Settings",
+    "sectionsAriaLabel": "Sections",
+    "breadcrumbAriaLabel": "Breadcrumb"
+  },
+  "topbar": {
+    "themeAriaLabel": "Theme (current: {active})",
+    "themeAriaLabelLoading": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "accountAriaLabel": "Account menu for {name}",
+    "accountDefaultName": "Admin",
+    "signOut": "Sign out",
+    "localeAriaLabel": "Switch language (current: {active})",
+    "localeChinese": "中文",
+    "localeEnglish": "English"
+  },
+  "sidebar": {
+    "primaryAriaLabel": "Primary",
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "openMobileNav": "Open navigation",
+    "closeMobileNav": "Close navigation",
+    "footer": "v{version} · {year}"
+  },
+  "pages": {
+    "overview": {
+      "title": "Overview",
+      "description": "Cross-site KPI snapshot. Real data lands in T08+.",
+      "kpiAriaLabel": "Key metrics",
+      "sitesTracked": "Sites tracked",
+      "sitesTrackedHint": "0 online · 0 archived",
+      "domainsLabel": "Domains",
+      "domainsHint": "0 expiring in 30 days",
+      "deploymentsLabel": "Deployments (7d)",
+      "deploymentsHint": "Pending T10",
+      "openAlerts": "Open alerts",
+      "openAlertsHint": "Pending T16",
+      "recentActivity": "Recent activity",
+      "recentActivityHint": "preview · mock data",
+      "recentActivityAriaLabel": "Recent activity",
+      "emptyTitle": "Nothing else to show yet",
+      "emptyDescription": "Sparklines, error budgets, traffic & other cards arrive in M2.",
+      "activity": {
+        "colSite": "Site",
+        "colEvent": "Event",
+        "colStatus": "Status",
+        "colDuration": "Duration",
+        "colWhen": "When",
+        "eventDeploy": "Deploy",
+        "eventAlert": "Alert",
+        "eventAudit": "Audit",
+        "durationFormat": "{ms} ms"
+      }
+    },
+    "sites": {
+      "title": "Sites",
+      "description": "Registry of every site this dashboard manages.",
+      "newAction": "New site",
+      "new": {
+        "title": "New site",
+        "description": "Register a site so the dashboard can track domains, deployments, and audits."
+      },
+      "list": {
+        "colName": "Name",
+        "colPrimary": "Primary URL",
+        "colType": "Type",
+        "colStatus": "Status",
+        "colHealth": "Health",
+        "colCreated": "Created",
+        "sortByAriaLabel": "Sort by {column}",
+        "empty": "No sites match the current filters.",
+        "loadFailed": "Failed to load sites"
+      },
+      "filters": {
+        "ariaLabel": "Site filters",
+        "search": "Search",
+        "searchPlaceholder": "Name, slug, or URL…",
+        "typeLabel": "Type",
+        "anyType": "Any type",
+        "anyPlaceholder": "Any",
+        "statusLabel": "Status",
+        "anyStatus": "Any status",
+        "showArchived": "Show archived"
+      },
+      "form": {
+        "sectionBasics": "Basics",
+        "sectionTechRepo": "Tech stack & repo",
+        "sectionIntegrations": "Integrations",
+        "sectionNotes": "Notes",
+        "fieldName": "Name",
+        "fieldPrimaryUrl": "Primary URL",
+        "fieldPrimaryUrlPlaceholder": "https://example.com",
+        "fieldSiteType": "Site type",
+        "fieldStatus": "Status",
+        "fieldTargetCountry": "Target country (ISO-2)",
+        "fieldTargetCountryPlaceholder": "US",
+        "fieldTargetLanguage": "Target language",
+        "fieldTargetLanguagePlaceholder": "en",
+        "fieldTags": "Tags",
+        "fieldTagsPlaceholder": "comma, separated, tags",
+        "fieldFramework": "Framework",
+        "fieldHosting": "Hosting",
+        "fieldRepoUrl": "Repository URL",
+        "fieldRepoUrlPlaceholder": "https://github.com/org/repo",
+        "fieldRepoProvider": "Repository provider",
+        "fieldCfAccountId": "Cloudflare account id",
+        "fieldCfPagesProject": "Cloudflare Pages project",
+        "fieldAnalyticsProvider": "Analytics provider",
+        "fieldAnalyticsId": "Analytics id",
+        "fieldAnalyticsIdPlaceholder": "G-XXXXXXXX",
+        "fieldSearchConsoleProperty": "Search Console property",
+        "fieldSearchConsolePropertyPlaceholder": "sc-domain:example.com",
+        "fieldAdsensePublisherId": "AdSense publisher id",
+        "fieldAdsensePublisherIdPlaceholder": "pub-XXXXXXX",
+        "fieldAdsenseStatus": "AdSense status",
+        "submitCreate": "Create site",
+        "submitUpdate": "Save changes",
+        "createdToast": "Site “{name}” created",
+        "updatedToast": "Site “{name}” updated"
+      },
+      "detail": {
+        "emptyTitle": "More components arrive in M2",
+        "emptyDescription": "Uptime sparkline, recent audits, deployments timeline and error rates will land with their respective tasks.",
+        "tabsAriaLabel": "Site subpages",
+        "tabOverview": "Overview",
+        "tabTraffic": "Traffic",
+        "tabRevenue": "Revenue",
+        "tabUptime": "Uptime",
+        "tabAudits": "Audits",
+        "tabDeployments": "Deployments",
+        "tabSettings": "Settings",
+        "actionsAriaLabel": "Site actions",
+        "copyId": "Copy ID",
+        "copyJson": "Copy JSON",
+        "copyIdToast": "Site ID copied",
+        "copyJsonToast": "Site JSON copied",
+        "archive": "Archive",
+        "archiving": "Archiving…",
+        "archiveDialogTitle": "Archive {name}?",
+        "archiveDialogDescription": "Archiving hides this site from the default list but keeps its history. Toggle \"Show archived\" on the list page to see it again.",
+        "archiveSuccessToast": "Archived {name}",
+        "archiveFailedToast": "Archive failed"
+      },
+      "summary": {
+        "slug": "Slug",
+        "health": "Health",
+        "country": "Country",
+        "language": "Language",
+        "framework": "Framework",
+        "hosting": "Hosting",
+        "repo": "Repo",
+        "analytics": "Analytics"
+      }
+    },
+    "traffic": {
+      "title": "Traffic",
+      "description": "Global {from} → {to} · {granularity, select, week {weekly} other {daily}} granularity",
+      "rangePicker": {
+        "ariaLabel": "Date range",
+        "rangeLabel": "Range",
+        "presetsAriaLabel": "Quick presets",
+        "presetDays": "{days} d",
+        "from": "From",
+        "to": "To"
+      },
+      "kpis": {
+        "ariaLabel": "Traffic KPIs",
+        "pageViews": "Page views",
+        "uniqueVisitors": "Unique visitors",
+        "sessions": "Sessions",
+        "avgSession": "Avg. session",
+        "prev": "prev {value}",
+        "noBounceData": "No bounce data",
+        "bounce": "bounce {rate}"
+      },
+      "chart": {
+        "ariaLabel": "Traffic chart",
+        "title": "Traffic over time",
+        "metricAriaLabel": "Metric",
+        "metric": {
+          "pv": "Page views",
+          "uv": "Unique visitors",
+          "sessions": "Sessions"
+        },
+        "empty": "No traffic data in the selected window.",
+        "weekBucket": "wk {date}",
+        "dayBucket": "{date}"
+      },
+      "topSites": {
+        "ariaLabel": "Top sites",
+        "title": "Top sites",
+        "sortedBy": "sorted by {metric}",
+        "colSite": "Site",
+        "colPv": "Page views",
+        "colUv": "Unique visitors",
+        "colSessions": "Sessions",
+        "empty": "No traffic recorded for any site in this window."
+      },
+      "search": {
+        "ariaLabel": "Search console",
+        "title": "Search console",
+        "queriesCount": "{count} queries",
+        "impressions": "Impressions",
+        "clicks": "Clicks",
+        "ctr": "CTR",
+        "avgPosition": "Avg. position",
+        "avgPositionHint": "Lower is better",
+        "empty": "No search queries recorded for this window.",
+        "colQuery": "Query",
+        "colClicks": "Clicks",
+        "colImpressions": "Impressions",
+        "colCtr": "CTR",
+        "colAvgPos": "Avg pos"
+      }
+    },
+    "revenue": {
+      "title": "Revenue",
+      "description": "Global {from} → {to} · {granularity, select, week {weekly} other {daily}} granularity",
+      "siteTabs": {
+        "revenue": "Revenue",
+        "costs": "Costs"
+      },
+      "kpis": {
+        "ariaLabel": "Revenue KPIs",
+        "totalRevenue": "Total revenue",
+        "adSense": "AdSense",
+        "affiliate": "Affiliate",
+        "arpv": "ARPV",
+        "prev": "prev {value}",
+        "noRevenueWindow": "No revenue this window",
+        "shareOfTotal": "{percent} of total",
+        "topProgram": "top: {name}",
+        "noAffiliateEntries": "No affiliate entries",
+        "perPageView": "per page view",
+        "pvNotLoaded": "PV not loaded",
+        "noPvInWindow": "No PV in window"
+      },
+      "chart": {
+        "ariaLabel": "Revenue chart",
+        "title": "Revenue over time",
+        "modeAriaLabel": "Chart mode",
+        "modeStacked": "Stacked",
+        "modeLines": "Lines",
+        "empty": "No revenue data in the selected window.",
+        "seriesAdSense": "AdSense",
+        "seriesAffiliate": "Affiliate",
+        "weekBucket": "wk {date}",
+        "dayBucket": "{date}"
+      },
+      "topSites": {
+        "ariaLabel": "Top revenue sites",
+        "title": "Top sites by revenue",
+        "sitesCount": "{count} sites",
+        "colSite": "Site",
+        "colAdSense": "AdSense",
+        "colAffiliate": "Affiliate",
+        "colTotal": "Total",
+        "empty": "No revenue recorded for any site in this window."
+      },
+      "affiliate": {
+        "ariaLabel": "Affiliate entries",
+        "title": "Affiliate entries",
+        "subtitle": "Manual revenue rows. Each entry is spread evenly across its period in the chart.",
+        "addEntry": "Add entry",
+        "empty": "No entries yet \u2014 add a row above to start tracking affiliate revenue.",
+        "colPeriod": "Period",
+        "colProgram": "Program",
+        "colAmount": "Amount (USD)",
+        "colOriginal": "Original",
+        "colPayout": "Payout",
+        "colActionsSr": "Actions",
+        "editAria": "Edit {program}",
+        "deleteAria": "Delete {program}",
+        "deleteTitle": "Delete this entry?",
+        "deleteDescription": "This will permanently remove the {program} entry covering {period} ({amount}).",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "removing": "Removing\u2026",
+        "entryRemoved": "Entry removed",
+        "deleteFailed": "Delete failed",
+        "form": {
+          "titleEdit": "Edit affiliate entry",
+          "titleAdd": "Add affiliate entry",
+          "subtitle": "Tip: prefer one entry per <strong>program</strong> per period so trends stay readable. Amounts are stored in USD; the original currency fields are bookkeeping.",
+          "fieldProgram": "Program",
+          "fieldProgramPlaceholder": "Amazon Associates",
+          "fieldPeriodStart": "Period start",
+          "fieldPeriodEnd": "Period end",
+          "fieldAmountUsd": "Amount (USD)",
+          "fieldPayoutDate": "Payout date",
+          "fieldOriginalAmount": "Original amount",
+          "fieldCurrency": "Currency",
+          "fieldCurrencyPlaceholder": "USD",
+          "fieldNotes": "Notes",
+          "optional": "optional",
+          "cancel": "Cancel",
+          "addEntry": "Add entry",
+          "saveChanges": "Save changes",
+          "saving": "Saving\u2026",
+          "entryAdded": "Entry added",
+          "entryUpdated": "Entry updated",
+          "saveFailed": "Save failed"
+        }
+      }
+    },
+    "roi": {
+      "title": "ROI",
+      "description": "Global {from} → {to} · {count, plural, =0 {0 sites} one {# site} other {# sites}} · sorted by {sortBy}",
+      "sortKeys": {
+        "roi": "ROI",
+        "revenue": "revenue",
+        "cost": "cost",
+        "profit": "profit",
+        "rpm": "RPM",
+        "pv": "PV"
+      },
+      "kpis": {
+        "ariaLabel": "ROI KPIs",
+        "revenue": "Revenue",
+        "cost": "Cost",
+        "costNoneHint": "No cost recorded",
+        "profit": "Profit",
+        "profitUp": "↑ profit",
+        "profitDown": "↓ loss",
+        "roi": "ROI",
+        "naValue": "N/A",
+        "roiInProfit": "↑ in profit",
+        "roiInLoss": "↓ in loss",
+        "noPvData": "No PV data",
+        "rpmHint": "RPM {value}"
+      },
+      "banner": {
+        "needsAttention": "{count, plural, =1 {1 site needs attention} other {# sites need attention}}",
+        "flagSummary": "{label} ({count})",
+        "flags": {
+          "negative_roi": "Negative ROI",
+          "low_rpm": "Low RPM",
+          "declining_revenue": "Declining revenue"
+        }
+      },
+      "table": {
+        "colSite": "Site",
+        "colPv": "PV",
+        "colRevenue": "Revenue",
+        "colCost": "Cost",
+        "colProfit": "Profit",
+        "colRoi": "ROI",
+        "colRpm": "RPM",
+        "colFlags": "Flags",
+        "naValue": "N/A",
+        "empty": "No sites yet \u2014 create one and add cost / revenue data to see ROI.",
+        "flagsShort": {
+          "negative_roi": "ROI<0",
+          "low_rpm": "low RPM",
+          "declining_revenue": "declining"
+        }
+      },
+      "costs": {
+        "monthlyCosts": "Monthly costs",
+        "addCost": "Add cost",
+        "deleteConfirm": "Delete cost row for {month}?",
+        "deleteFailed": "Failed to delete row.",
+        "refreshFailed": "Failed to refresh costs",
+        "rowActionsAria": "Row actions",
+        "colMonth": "Month",
+        "colHosting": "Hosting",
+        "colDomain": "Domain",
+        "colContent": "Content",
+        "colAds": "Ads",
+        "colOther": "Other",
+        "colTotal": "Total",
+        "empty": "No monthly costs yet. Add one to see ROI.",
+        "editAria": "Edit {month}",
+        "deleteAria": "Delete {month}",
+        "form": {
+          "titleEdit": "Edit monthly cost",
+          "titleAdd": "Add monthly cost",
+          "subtitle": "One row per month. The dashboard amortises each row across the days it covers.",
+          "fieldMonth": "Month",
+          "monthHint": "Future months are not allowed; current month accepts estimates.",
+          "fieldHosting": "Hosting / CDN (USD)",
+          "fieldDomain": "Domain (USD)",
+          "fieldContent": "Content (USD)",
+          "fieldAds": "Ads spend (USD)",
+          "fieldOther": "Other (USD)",
+          "fieldNotes": "Notes",
+          "optional": "optional",
+          "total": "Total this month:",
+          "cancel": "Cancel",
+          "addCost": "Add cost",
+          "saveChanges": "Save changes",
+          "saving": "Saving\u2026",
+          "errorPickMonth": "Pick a valid month",
+          "errorFutureMonth": "Cannot record costs for a future month",
+          "errorAllZero": "Enter at least one non-zero cost",
+          "confirmHighDollar": "One or more columns ({cols}) exceed {threshold}.\nThis is unusual \u2014 confirm to save.",
+          "costAdded": "Cost added",
+          "costUpdated": "Cost updated",
+          "saveFailed": "Save failed"
+        }
+      },
+      "waterfall": {
+        "buckets": {
+          "adRev": "Ad rev.",
+          "affiliate": "Affiliate",
+          "hosting": "Hosting",
+          "domain": "Domain",
+          "content": "Content",
+          "adsSpend": "Ads spend",
+          "other": "Other",
+          "profit": "Profit"
+        }
+      }
+    },
+    "domains": {
+      "title": "Domains",
+      "description": "DNS / registrar / SSL expiries across the portfolio. Sites due within 30 days are highlighted; past-due rows turn red.",
+      "list": {
+        "colDomain": "Domain",
+        "colSite": "Site",
+        "colRegistrarDns": "Registrar / DNS",
+        "colExpires": "Expires",
+        "colSsl": "SSL",
+        "sortByDomain": "Sort by domain",
+        "sortByExpires": "Sort by expiry",
+        "primaryBadge": "Primary",
+        "empty": "No domains match the current filters.",
+        "loadFailed": "Failed to load domains"
+      },
+      "filters": {
+        "ariaLabel": "Domain filters",
+        "search": "Search",
+        "searchPlaceholder": "Domain or registrar…",
+        "expiringWithin": "Expiring within",
+        "expiryAll": "All",
+        "expiryDays": "{days} days"
+      },
+      "card": {
+        "title": "Domains",
+        "add": "Add domain",
+        "loading": "Loading…",
+        "empty": "No domains attached yet. Add the primary domain that visitors reach the site on.",
+        "primaryBadge": "Primary",
+        "registrarLine": "Registrar: {registrar} · DNS: {dns}",
+        "makePrimary": "Make primary",
+        "deleteAriaLabel": "Delete {domain}",
+        "primarySetToast": "Primary domain set to {domain}",
+        "removedToast": "Removed {domain}",
+        "deleteDialogTitle": "Delete “{domain}”?",
+        "deleteDialogPrimaryWarning": "This is the current primary domain. Deleting it will leave the site without a primary — make sure another domain is promoted afterwards.",
+        "deleteDialogOnlyOneWarning": "This is the only domain attached to this site. Deleting it leaves the site without a domain.",
+        "deleting": "Deleting…",
+        "delete": "Delete",
+        "addDialog": {
+          "title": "Add domain",
+          "description": "Paste anything domain-shaped — we'll normalise scheme / path / port away.",
+          "fieldDomain": "Domain",
+          "fieldDomainPlaceholder": "example.com",
+          "fieldRegistrar": "Registrar",
+          "fieldRegistrarPlaceholder": "Cloudflare",
+          "fieldExpires": "Expires",
+          "setPrimary": "Set as primary",
+          "submit": "Add domain",
+          "submitting": "Adding…",
+          "addedToast": "Added {domain}",
+          "failedToast": "Add failed"
+        }
+      }
+    },
+    "deployments": {
+      "title": "Deployments",
+      "description": "Cross-site deployment events. POST to /api/v1/deployments from CI/Agents (idempotent by provider + provider_deployment_id).",
+      "list": {
+        "colSite": "Site",
+        "colStatus": "Status",
+        "colCommit": "Commit",
+        "colProvider": "Provider",
+        "colDuration": "Duration",
+        "colWhen": "When",
+        "logLink": "log",
+        "empty": "No deployments yet. POST one to <code>/api/v1/deployments</code>.",
+        "loadFailed": "Failed to load deployments"
+      },
+      "filters": {
+        "ariaLabel": "Deployment filters",
+        "statusLabel": "Status",
+        "anyStatus": "Any status",
+        "anyPlaceholder": "Any",
+        "providerLabel": "Provider",
+        "anyProvider": "Any provider"
+      },
+      "timeline": {
+        "empty": "No deployments recorded for this site yet. POST one to <code>/api/v1/sites/{siteId}/deployments</code>.",
+        "via": "via {provider}",
+        "by": "by {actor}",
+        "buildLog": "build log"
+      }
+    },
+    "errors": {
+      "title": "Errors",
+      "description": "Aggregated error reports from JS / build / API / worker. POST to /api/v1/errors with an API key (scope: errors:write).",
+      "list": {
+        "filterAll": "All",
+        "filterErrors": "Errors",
+        "filterWarnings": "Warnings",
+        "showingResolved": "Showing resolved",
+        "hidingResolved": "Hiding resolved",
+        "colMessage": "Message",
+        "colSource": "Source",
+        "colCount": "Count",
+        "colLastSeen": "Last seen",
+        "noMessage": "(no message)",
+        "empty": "No matching errors.",
+        "details": "Details",
+        "resolve": "Resolve",
+        "reopen": "Reopen"
+      },
+      "detail": {
+        "title": "Error detail",
+        "close": "Close",
+        "resolvedBadge": "resolved",
+        "fingerprint": "Fingerprint",
+        "stackTrace": "Stack trace",
+        "meta": "Meta",
+        "firstSeen": "First seen",
+        "lastSeen": "Last seen",
+        "noStack": "(no stack)",
+        "noMeta": "(none)"
+      }
+    },
+    "alerts": {
+      "title": "Alerts",
+      "description": "Rules evaluate every metric; channels send the notification. Channel configs are encrypted at rest (AES-256-GCM).",
+      "tabHistory": "History",
+      "tabRules": "Rules",
+      "tabChannels": "Channels",
+      "list": {
+        "empty": "No alerts. The monitoring stack is happy.",
+        "statusFiring": "firing",
+        "statusResolved": "resolved",
+        "noMessage": "(no message)",
+        "firedAt": "fired {date}",
+        "firedResolvedAt": "fired {firedAt} · resolved {resolvedAt}",
+        "lastDelivery": "Last delivery:",
+        "markResolved": "Mark resolved",
+        "resolvedToast": "Alert resolved"
+      },
+      "channels": {
+        "configuredTitle": "Configured channels",
+        "empty": "No channels yet. Add one on the right.",
+        "disabledBadge": "disabled",
+        "test": "Test",
+        "delete": "Delete",
+        "addTitle": "Add channel",
+        "fieldName": "Name",
+        "fieldNamePlaceholder": "ops · feishu",
+        "fieldType": "Type",
+        "fieldConfig": "Config (JSON)",
+        "save": "Save channel",
+        "savedToast": "Channel saved",
+        "deletedToast": "Channel deleted",
+        "testSentToast": "Test message sent",
+        "testFailedToast": "Test failed: {error}",
+        "testUnknownError": "unknown",
+        "invalidJson": "Config is not valid JSON"
+      },
+      "rules": {
+        "configuredTitle": "Configured rules",
+        "empty": "No rules yet.",
+        "enabledBadge": "enabled",
+        "offBadge": "off",
+        "delete": "Delete",
+        "addTitle": "Add rule (global)",
+        "fieldName": "Name",
+        "fieldMetric": "Metric",
+        "fieldOperator": "Operator",
+        "fieldThreshold": "Threshold",
+        "fieldConsecutive": "Consecutive",
+        "fieldChannels": "Channels",
+        "noChannelsHint": "No channels yet — add one first.",
+        "save": "Save rule",
+        "savedToast": "Rule saved"
+      }
+    },
+    "integrations": {
+      "title": "Integrations",
+      "description": "Pull data from Cloudflare, GitHub, GA4 / Plausible, Search Console, and AdSense. All scheduled hourly/daily; click Sync to force a run.",
+      "loadFailed": "Failed to load integration status: {error}",
+      "unknownError": "unknown error",
+      "card": {
+        "configured": "configured",
+        "notConfigured": "not configured",
+        "lastSync": "last sync",
+        "lastError": "last error",
+        "sitesTracked": "sites tracked",
+        "never": "never",
+        "test": "Test",
+        "connect": "Connect",
+        "syncNow": "Sync now",
+        "connectionOk": "{name}: connection OK",
+        "syncStarted": "{name}: sync started"
+      },
+      "providers": {
+        "cloudflare": {
+          "name": "Cloudflare Pages",
+          "description": "Pull build/deploy history from CF Pages projects. Set CF_API_TOKEN in env."
+        },
+        "github": {
+          "name": "GitHub Actions",
+          "description": "Sync workflow runs as deployment events. Set GH_TOKEN in env."
+        },
+        "ga4": {
+          "name": "Google Analytics 4",
+          "description": "Pull daily PV/UV/sessions via the Data API. Service account JSON in GA4_SERVICE_ACCOUNT_JSON."
+        },
+        "plausible": {
+          "name": "Plausible",
+          "description": "Optional analytics provider. Set PLAUSIBLE_API_KEY for any site with analyticsProvider=plausible."
+        },
+        "gsc": {
+          "name": "Search Console",
+          "description": "Pull impressions/clicks/CTR. Requires GSC_OAUTH_* env then a one-time consent."
+        },
+        "adsense": {
+          "name": "AdSense",
+          "description": "Daily earnings & RPM via the AdSense Management API. Needs OAuth + ADSENSE_ACCOUNT_NAME."
+        }
+      }
+    },
+    "uptime": {
+      "page": {
+        "timeWindowAria": "Time window",
+        "recentFailuresAria": "Recent failures",
+        "recentFailuresTitle": "Recent failures",
+        "window24h": "last 24h",
+        "window7d": "last 7d",
+        "window30d": "last 30d",
+        "windowCustom": "last {hours}h"
+      },
+      "summary": {
+        "ariaLabel": "Uptime summary",
+        "uptimeLabel": "Uptime · {window}",
+        "uptimeHint": "{ok} ok / {total} checks",
+        "avgResponse": "Avg response",
+        "avgResponseHint": "Across the same window",
+        "failedChecks": "Failed checks",
+        "noData": "No data yet",
+        "windowPercent": "{percent}% of window"
+      },
+      "chart": {
+        "ariaLabel": "Uptime response time chart",
+        "empty": "No uptime data in the selected window.",
+        "maxLabel": "max {ms} ms",
+        "tooltip": "{date}: {ok}/{total} ok"
+      },
+      "failures": {
+        "empty": "No failures in the selected window.",
+        "networkError": "network error",
+        "noErrorMessage": "No error message recorded.",
+        "httpStatus": "HTTP {code}"
+      },
+      "trigger": {
+        "checkNow": "Check now",
+        "passedToast": "Uptime check passed",
+        "failedToast": "Uptime check failed",
+        "healthScoreDescription": "Health score is now {score}",
+        "errorToast": "Could not check the site",
+        "unknownError": "Unknown error"
+      }
+    },
+    "audits": {
+      "list": {
+        "empty": "No audit runs yet. Trigger one above.",
+        "colType": "Type",
+        "colStarted": "Started",
+        "colDuration": "Duration",
+        "colStatus": "Status",
+        "colScore": "Score",
+        "details": "Details →",
+        "scoreFormat": "{score}/100",
+        "durationFormat": "{seconds} s"
+      },
+      "lighthouse": {
+        "ariaLabel": "Lighthouse scores",
+        "performance": "Performance",
+        "seo": "SEO",
+        "bestPractices": "Best Practices",
+        "accessibility": "Accessibility"
+      },
+      "trend": {
+        "empty": "Run Lighthouse a few times to see a trend.",
+        "latest": "Latest"
+      },
+      "findings": {
+        "empty": "No findings — this audit is clean."
+      },
+      "trigger": {
+        "runSeo": "Run SEO audit",
+        "queueLighthouse": "Queue Lighthouse",
+        "queuedTitle": "{type} audit queued",
+        "queuedDescription": "Will run shortly",
+        "completeTitle": "{type} audit complete",
+        "completeDescription": "Score {score}/100 · {total} findings",
+        "failedToast": "Could not run {type} audit"
+      },
+      "detail": {
+        "summary": "Audit summary",
+        "status": "Status",
+        "score": "Score",
+        "started": "Started",
+        "finished": "Finished",
+        "scoreFormat": "{score}/100"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Profile, API keys, and notification preferences.",
+      "signedInAdmin": "Signed-in admin",
+      "themeLabel": "Theme",
+      "themeValue": "Auto",
+      "themeHint": "Pick light/dark from the top-right switcher.",
+      "emptyTitle": "More settings coming soon",
+      "emptyDescription": "API key management lands together with T25 (Agent task queue) and the notification channels page is part of T16."
+    }
+  }
+}

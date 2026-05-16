@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import { Badge } from '@/components/ui/badge';
 
@@ -17,11 +18,16 @@ const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'destructive' | 'mu
   failed: 'destructive',
 };
 
+const KNOWN_STATUS = ['success', 'running', 'failed', 'unknown'] as const;
+type KnownStatus = (typeof KNOWN_STATUS)[number];
+
 export function AuditList({ items, siteId }: { items: AuditRunRow[]; siteId: string }) {
+  const t = useTranslations('pages.audits.list');
+  const tStatus = useTranslations('enums.auditStatus');
   if (items.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-        No audit runs yet. Trigger one above.
+        {t('empty')}
       </p>
     );
   }
@@ -30,11 +36,11 @@ export function AuditList({ items, siteId }: { items: AuditRunRow[]; siteId: str
       <table className="w-full text-sm">
         <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
-            <th className="px-4 py-3 text-left font-medium">Type</th>
-            <th className="px-4 py-3 text-left font-medium">Started</th>
-            <th className="px-4 py-3 text-left font-medium">Duration</th>
-            <th className="px-4 py-3 text-left font-medium">Status</th>
-            <th className="px-4 py-3 text-left font-medium">Score</th>
+            <th className="px-4 py-3 text-left font-medium">{t('colType')}</th>
+            <th className="px-4 py-3 text-left font-medium">{t('colStarted')}</th>
+            <th className="px-4 py-3 text-left font-medium">{t('colDuration')}</th>
+            <th className="px-4 py-3 text-left font-medium">{t('colStatus')}</th>
+            <th className="px-4 py-3 text-left font-medium">{t('colScore')}</th>
             <th />
           </tr>
         </thead>
@@ -52,22 +58,26 @@ export function AuditList({ items, siteId }: { items: AuditRunRow[]; siteId: str
                   {start ? start.toISOString() : '—'}
                 </td>
                 <td className="px-4 py-3 align-middle text-muted-foreground">
-                  {durMs === null ? '—' : `${Math.round(durMs / 1000)} s`}
+                  {durMs === null
+                    ? '—'
+                    : t('durationFormat', { seconds: Math.round(durMs / 1000) })}
                 </td>
                 <td className="px-4 py-3 align-middle">
                   <Badge variant={(r.status ? STATUS_VARIANT[r.status] : undefined) ?? 'muted'}>
-                    {r.status ?? 'unknown'}
+                    {(KNOWN_STATUS as readonly string[]).includes(r.status ?? 'unknown')
+                      ? tStatus((r.status ?? 'unknown') as KnownStatus)
+                      : (r.status ?? tStatus('unknown'))}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 align-middle font-medium">
-                  {r.score == null ? '—' : `${r.score}/100`}
+                  {r.score == null ? '—' : t('scoreFormat', { score: r.score })}
                 </td>
                 <td className="px-4 py-3 align-middle text-right">
                   <Link
                     href={`/sites/${siteId}/audits/${r.id}`}
                     className="text-sm text-primary hover:underline"
                   >
-                    Details →
+                    {t('details')}
                   </Link>
                 </td>
               </tr>

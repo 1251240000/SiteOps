@@ -1,15 +1,15 @@
+import { getTranslations } from 'next-intl/server';
+
 import { PageHeader } from '@/components/common/page-header';
 import { IntegrationsGrid } from '@/components/integrations/IntegrationsGrid';
 
 export const dynamic = 'force-dynamic';
 
-export default function IntegrationsPage() {
+export default async function IntegrationsPage() {
+  const t = await getTranslations('pages.integrations');
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Integrations"
-        description="Pull data from Cloudflare, GitHub, GA4 / Plausible, Search Console, and AdSense. All scheduled hourly/daily; click Sync to force a run."
-      />
+      <PageHeader title={t('title')} description={t('description')} />
       <IntegrationsGrid />
     </div>
   );

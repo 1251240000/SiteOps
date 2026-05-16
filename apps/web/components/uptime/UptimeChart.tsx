@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 export type UptimeChartPoint = {
@@ -17,6 +18,7 @@ export type UptimeChartPoint = {
  * each bucket by ok-rate (green ≥99%, amber ≥95%, red otherwise).
  */
 export function UptimeChart({ series }: { series: UptimeChartPoint[] }) {
+  const t = useTranslations('pages.uptime.chart');
   const view = useMemo(() => {
     if (series.length === 0) return null;
     const times = series.map((p) => new Date(p.bucket).getTime());
@@ -32,7 +34,7 @@ export function UptimeChart({ series }: { series: UptimeChartPoint[] }) {
   if (!view || series.length === 0) {
     return (
       <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 text-sm text-muted-foreground">
-        No uptime data in the selected window.
+        {t('empty')}
       </div>
     );
   }
@@ -65,17 +67,14 @@ export function UptimeChart({ series }: { series: UptimeChartPoint[] }) {
     <div className="rounded-lg border border-border bg-card p-3">
       <svg
         role="img"
-        aria-label="Uptime response time chart"
+        aria-label={t('ariaLabel')}
         viewBox={`0 0 ${W} ${H}`}
         className="h-40 w-full"
         preserveAspectRatio="none"
       >
-        <text
-          x={PAD}
-          y={PAD - 2}
-          fontSize={10}
-          className="fill-muted-foreground"
-        >{`max ${view.yMax} ms`}</text>
+        <text x={PAD} y={PAD - 2} fontSize={10} className="fill-muted-foreground">
+          {t('maxLabel', { ms: view.yMax })}
+        </text>
         {lineD ? <path d={lineD} fill="none" className="stroke-primary" strokeWidth={1.5} /> : null}
         {series.map((p, i) => {
           const okRate = p.total === 0 ? 1 : p.ok / p.total;
@@ -95,7 +94,13 @@ export function UptimeChart({ series }: { series: UptimeChartPoint[] }) {
               height={6}
               className={cls}
             >
-              <title>{`${new Date(p.bucket).toISOString()}: ${p.ok}/${p.total} ok`}</title>
+              <title>
+                {t('tooltip', {
+                  date: new Date(p.bucket).toISOString(),
+                  ok: p.ok,
+                  total: p.total,
+                })}
+              </title>
             </rect>
           );
         })}

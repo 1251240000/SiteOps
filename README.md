@@ -123,6 +123,15 @@ pnpm --filter @siteops/db db:seed
 pnpm dev
 ```
 
+`pnpm dev` 通过 Turborepo 同时拉起 web 和 worker。需要先把 `.env.local`
+的变量 export 到当前 shell（例如 `set -a; . ./.env.local; set +a`）。
+Web 在 dev 模式下走 [Turbopack](https://nextjs.org/docs/app/api-reference/turbopack)，
+首次编译显著快于 Webpack；生产构建（`pnpm build`）仍走 Webpack，链路不变。
+
+> 通过 LAN IP 或自定义域名访问时，把 `NEXT_DEV_ALLOWED_ORIGINS=10.1.1.10`
+> （多个用逗号分隔）写进 `.env.local`，可避免 Next 15 的 `Cross origin
+request detected` 警告。
+
 默认访问地址：
 
 - **Web 控制台**：http://localhost:3000

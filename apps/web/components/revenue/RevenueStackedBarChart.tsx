@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
   Bar,
@@ -52,24 +53,25 @@ export function RevenueStackedBarChart({
   data: RevenuePoint[];
   granularity: 'day' | 'week';
 }) {
+  const t = useTranslations('pages.revenue.chart');
   const [mode, setMode] = useState<ChartMode>('stacked');
 
   if (data.length === 0) {
     return (
       <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 text-sm text-muted-foreground">
-        No revenue data in the selected window.
+        {t('empty')}
       </div>
     );
   }
 
   return (
     <section
-      aria-label="Revenue chart"
+      aria-label={t('ariaLabel')}
       className="space-y-3 rounded-lg border border-border bg-card p-4"
     >
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Revenue over time</h2>
-        <div role="tablist" aria-label="Chart mode" className="flex gap-1">
+        <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
+        <div role="tablist" aria-label={t('modeAriaLabel')} className="flex gap-1">
           {(['stacked', 'lines'] as const).map((key) => {
             const active = mode === key;
             return (
@@ -86,7 +88,7 @@ export function RevenueStackedBarChart({
                     : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
                 )}
               >
-                {key === 'stacked' ? 'Stacked' : 'Lines'}
+                {key === 'stacked' ? t('modeStacked') : t('modeLines')}
               </button>
             );
           })}
@@ -103,7 +105,7 @@ export function RevenueStackedBarChart({
                 stroke="currentColor"
                 strokeOpacity={0.4}
                 tick={{ fill: 'currentColor', fillOpacity: 0.7, fontSize: 11 }}
-                tickFormatter={(v: string) => formatBucket(v, granularity)}
+                tickFormatter={(v: string) => formatBucket(v, granularity, t)}
                 minTickGap={24}
               />
               <YAxis
@@ -115,13 +117,13 @@ export function RevenueStackedBarChart({
               />
               <Tooltip
                 contentStyle={tooltipStyle}
-                labelFormatter={(label: string) => formatBucket(label, granularity)}
+                labelFormatter={(label: string) => formatBucket(label, granularity, t)}
                 formatter={tooltipFormatter}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar
                 dataKey="adRevenue"
-                name="AdSense"
+                name={t('seriesAdSense')}
                 stackId="rev"
                 fill="hsl(var(--primary))"
                 radius={[0, 0, 0, 0]}
@@ -129,7 +131,7 @@ export function RevenueStackedBarChart({
               />
               <Bar
                 dataKey="affiliateRevenue"
-                name="Affiliate"
+                name={t('seriesAffiliate')}
                 stackId="rev"
                 fill="hsl(var(--warning))"
                 radius={[2, 2, 0, 0]}
@@ -144,7 +146,7 @@ export function RevenueStackedBarChart({
                 stroke="currentColor"
                 strokeOpacity={0.4}
                 tick={{ fill: 'currentColor', fillOpacity: 0.7, fontSize: 11 }}
-                tickFormatter={(v: string) => formatBucket(v, granularity)}
+                tickFormatter={(v: string) => formatBucket(v, granularity, t)}
                 minTickGap={24}
               />
               <YAxis
@@ -156,14 +158,14 @@ export function RevenueStackedBarChart({
               />
               <Tooltip
                 contentStyle={tooltipStyle}
-                labelFormatter={(label: string) => formatBucket(label, granularity)}
+                labelFormatter={(label: string) => formatBucket(label, granularity, t)}
                 formatter={tooltipFormatter}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Line
                 type="monotone"
                 dataKey="adRevenue"
-                name="AdSense"
+                name={t('seriesAdSense')}
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 dot={false}
@@ -173,7 +175,7 @@ export function RevenueStackedBarChart({
               <Line
                 type="monotone"
                 dataKey="affiliateRevenue"
-                name="Affiliate"
+                name={t('seriesAffiliate')}
                 stroke="hsl(var(--warning))"
                 strokeWidth={2}
                 dot={false}
@@ -201,9 +203,13 @@ function tooltipFormatter(value: unknown, name: string): [string, string] {
   return [num, name];
 }
 
-function formatBucket(date: string, granularity: 'day' | 'week'): string {
+function formatBucket(
+  date: string,
+  granularity: 'day' | 'week',
+  t: (key: 'weekBucket' | 'dayBucket', values: { date: string }) => string,
+): string {
   const month = date.slice(5, 7);
   const day = date.slice(8, 10);
-  if (granularity === 'week') return `wk ${month}-${day}`;
-  return `${month}-${day}`;
+  const formatted = `${month}-${day}`;
+  return t(granularity === 'week' ? 'weekBucket' : 'dayBucket', { date: formatted });
 }

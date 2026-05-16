@@ -1,4 +1,5 @@
 import { Award, MousePointerClick, Search, Sparkles } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { StatCard } from '@/components/common/stat-card';
 
@@ -38,32 +39,43 @@ export function SearchConsolePanel({
   summary: SearchSummaryValue;
   topQueries: TopQueryRow[];
 }) {
+  const t = useTranslations('pages.traffic.search');
   return (
-    <section aria-label="Search console" className="space-y-4">
+    <section aria-label={t('ariaLabel')} className="space-y-4">
       <header className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Search console</h2>
-        <span className="text-xs text-muted-foreground">{topQueries.length} queries</span>
+        <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
+        <span className="text-xs text-muted-foreground">
+          {t('queriesCount', { count: topQueries.length })}
+        </span>
       </header>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Impressions" value={intFmt.format(summary.impressions)} icon={Search} />
-        <StatCard label="Clicks" value={intFmt.format(summary.clicks)} icon={MousePointerClick} />
         <StatCard
-          label="CTR"
+          label={t('impressions')}
+          value={intFmt.format(summary.impressions)}
+          icon={Search}
+        />
+        <StatCard
+          label={t('clicks')}
+          value={intFmt.format(summary.clicks)}
+          icon={MousePointerClick}
+        />
+        <StatCard
+          label={t('ctr')}
           value={summary.impressions === 0 ? '—' : pctFmt.format(summary.ctr)}
           icon={Sparkles}
         />
         <StatCard
-          label="Avg. position"
+          label={t('avgPosition')}
           value={summary.avgPosition === null ? '—' : posFmt.format(summary.avgPosition)}
           icon={Award}
-          hint="Lower is better"
+          hint={t('avgPositionHint')}
         />
       </div>
 
       {topQueries.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-          No search queries recorded for this window.
+          {t('empty')}
         </p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border">
@@ -71,19 +83,19 @@ export function SearchConsolePanel({
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
-                  Query
+                  {t('colQuery')}
                 </th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Clicks
+                  {t('colClicks')}
                 </th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Impressions
+                  {t('colImpressions')}
                 </th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
-                  CTR
+                  {t('colCtr')}
                 </th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Avg pos
+                  {t('colAvgPos')}
                 </th>
               </tr>
             </thead>

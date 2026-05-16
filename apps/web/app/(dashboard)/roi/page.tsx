@@ -1,10 +1,13 @@
+import { getTranslations } from 'next-intl/server';
+
 import { roi as roiSvc } from '@siteops/services';
 
 import { PageHeader } from '@/components/common/page-header';
-import { DateRangePicker, resolveRange } from '@/components/traffic/DateRangePicker';
+import { DateRangePicker } from '@/components/traffic/DateRangePicker';
 import { LowEfficiencyBanner, type LowEfficiencyFlag } from '@/components/roi/LowEfficiencyBanner';
 import { RoiTable } from '@/components/roi/RoiTable';
 import { getDb } from '@/lib/db';
+import { resolveRange } from '@/lib/date-range';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,11 +52,17 @@ export default async function RoiPage({ searchParams }: PageProps) {
     }
   }
 
+  const t = await getTranslations('pages.roi');
   return (
     <div className="space-y-6">
       <PageHeader
-        title="ROI"
-        description={`Global ${range.from} → ${range.to} · ${rows.length} sites · sorted by ${sortBy}`}
+        title={t('title')}
+        description={t('description', {
+          from: range.from,
+          to: range.to,
+          count: rows.length,
+          sortBy: t(`sortKeys.${sortBy}`),
+        })}
       />
 
       <DateRangePicker />

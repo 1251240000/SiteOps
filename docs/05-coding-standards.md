@@ -36,6 +36,7 @@
   - `components/sites/SiteList.tsx` — 业务组件
   - `components/ui/Button.tsx` — shadcn/ui 通用组件
 - 任何"列表 + 详情"用 URL 状态（query string），不要全塞 React state。
+- **国际化**：dashboard UI 字符串**禁止硬编码英文/中文**——所有用户可见文本（标签、按钮、aria-label、placeholder、toast）必须走 next-intl 的 `useTranslations(...)` / `getTranslations(...)`，新增 key 同时更新 `apps/web/messages/zh-CN.json` 和 `en-US.json`，由 `pnpm --filter @siteops/web i18n:check` 在 CI 把关一致性。后端 API 错误 message / 邮件 / 告警通道文案保持英文（机器消费契约），前端在显示侧用 catalog 把 `error.code` 映射到本地化文本。
 
 ## 4. 后端（Route Handlers）
 

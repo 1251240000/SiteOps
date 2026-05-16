@@ -1,16 +1,16 @@
+import { getTranslations } from 'next-intl/server';
+
 import { PageHeader } from '@/components/common/page-header';
 import { DomainFilters } from '@/components/domains/domain-filters';
 import { DomainList } from '@/components/domains/domain-list';
 
 export const dynamic = 'force-dynamic';
 
-export default function DomainsPage() {
+export default async function DomainsPage() {
+  const t = await getTranslations('pages.domains');
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Domains"
-        description="DNS / registrar / SSL expiry across every site. Rows expiring within 30 days are highlighted; rows already expired are red."
-      />
+      <PageHeader title={t('title')} description={t('description')} />
       <DomainFilters />
       <DomainList />
     </div>

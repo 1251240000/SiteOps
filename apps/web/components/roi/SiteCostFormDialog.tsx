@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -126,6 +127,8 @@ export function SiteCostFormDialog({
   costId,
   onSaved,
 }: DialogProps) {
+  const t = useTranslations('pages.roi.costs.form');
+  const tCommon = useTranslations('common');
   const isEdit = Boolean(costId);
   const [submitting, setSubmitting] = useState(false);
 
@@ -154,11 +157,11 @@ export function SiteCostFormDialog({
   async function onSubmit(values: FormFields): Promise<void> {
     const month = normaliseMonth(values.month);
     if (!/^\d{4}-\d{2}-01$/.test(month)) {
-      toast.error('Pick a valid month');
+      toast.error(t('errorPickMonth'));
       return;
     }
     if (isFutureMonth(month)) {
-      toast.error('Cannot record costs for a future month');
+      toast.error(t('errorFutureMonth'));
       return;
     }
     const amounts = {
@@ -175,7 +178,7 @@ export function SiteCostFormDialog({
       amounts.adsSpendUsd +
       amounts.otherUsd;
     if (sum === 0) {
-      toast.error('Enter at least one non-zero cost');
+      toast.error(t('errorAllZero'));
       return;
     }
 
@@ -183,7 +186,10 @@ export function SiteCostFormDialog({
     if (overLimit.length > 0 && typeof window !== 'undefined') {
       const cols = overLimit.map(([k]) => k).join(', ');
       const confirmed = window.confirm(
-        `One or more columns (${cols}) exceed $${HIGH_DOLLAR_THRESHOLD.toLocaleString()}.\nThis is unusual — confirm to save.`,
+        t('confirmHighDollar', {
+          cols,
+          threshold: `$${HIGH_DOLLAR_THRESHOLD.toLocaleString()}`,
+        }),
       );
       if (!confirmed) return;
     }
@@ -203,12 +209,15 @@ export function SiteCostFormDialog({
       } else {
         await api.post(`/roi/sites/${siteId}/costs`, payload);
       }
-      toast.success(isEdit ? 'Cost updated' : 'Cost added');
+      toast.success(isEdit ? t('costUpdated') : t('costAdded'));
       onSaved();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Save failed';
+      const message = err instanceof ApiError ? err.message : t('saveFailed');
       toast.error(message, {
-        description: err instanceof ApiError && err.requestId ? `Req ${err.requestId}` : undefined,
+        description:
+          err instanceof ApiError && err.requestId
+            ? tCommon('requestId', { id: err.requestId })
+            : undefined,
       });
     } finally {
       setSubmitting(false);
@@ -219,10 +228,8 @@ export function SiteCostFormDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{isEdit ? 'Edit monthly cost' : 'Add monthly cost'}</AlertDialogTitle>
-          <p className="text-xs text-muted-foreground">
-            One row per month. The dashboard amortises each row across the days it covers.
-          </p>
+          <AlertDialogTitle>{isEdit ? t('titleEdit') : t('titleAdd')}</AlertDialogTitle>
+          <p className="text-xs text-muted-foreground">{t('subtitle')}</p>
         </AlertDialogHeader>
 
         <form
@@ -233,7 +240,7 @@ export function SiteCostFormDialog({
           noValidate
           aria-busy={submitting}
         >
-          <Field label="Month" error={errors.month?.message} required fullWidth>
+          <Field label={t('fieldMonth')} error={errors.month?.message} required fullWidth>
             <Input
               type="month"
               {...register('month', {
@@ -243,12 +250,10 @@ export function SiteCostFormDialog({
               disabled={isEdit}
               max={thisMonthFirst().slice(0, 7)}
             />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Future months are not allowed; current month accepts estimates.
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('monthHint')}</p>
           </Field>
 
-          <Field label="Hosting / CDN (USD)" error={errors.hostingUsd?.message}>
+          <Field label={t('fieldHosting')} error={errors.hostingUsd?.message}>
             <Input
               type="number"
               inputMode="decimal"
@@ -257,7 +262,7 @@ export function SiteCostFormDialog({
               {...register('hostingUsd')}
             />
           </Field>
-          <Field label="Domain (USD)" error={errors.domainUsd?.message}>
+          <Field label={t('fieldDomain')} error={errors.domainUsd?.message}>
             <Input
               type="number"
               inputMode="decimal"
@@ -266,7 +271,7 @@ export function SiteCostFormDialog({
               {...register('domainUsd')}
             />
           </Field>
-          <Field label="Content (USD)" error={errors.contentUsd?.message}>
+          <Field label={t('fieldContent')} error={errors.contentUsd?.message}>
             <Input
               type="number"
               inputMode="decimal"
@@ -275,7 +280,7 @@ export function SiteCostFormDialog({
               {...register('contentUsd')}
             />
           </Field>
-          <Field label="Ads spend (USD)" error={errors.adsSpendUsd?.message}>
+          <Field label={t('fieldAds')} error={errors.adsSpendUsd?.message}>
             <Input
               type="number"
               inputMode="decimal"
@@ -284,7 +289,7 @@ export function SiteCostFormDialog({
               {...register('adsSpendUsd')}
             />
           </Field>
-          <Field label="Other (USD)" error={errors.otherUsd?.message} fullWidth>
+          <Field label={t('fieldOther')} error={errors.otherUsd?.message} fullWidth>
             <Input
               type="number"
               inputMode="decimal"
@@ -294,13 +299,13 @@ export function SiteCostFormDialog({
             />
           </Field>
 
-          <Field label="Notes" error={errors.notes?.message} fullWidth>
-            <Textarea rows={2} {...register('notes')} placeholder="optional" />
+          <Field label={t('fieldNotes')} error={errors.notes?.message} fullWidth>
+            <Textarea rows={2} {...register('notes')} placeholder={t('optional')} />
           </Field>
 
           <div className="col-span-1 flex items-center justify-between gap-2 sm:col-span-2">
             <p className="text-xs text-muted-foreground">
-              Total this month:&nbsp;
+              {t('total')}&nbsp;
               <span className="font-medium text-foreground tabular-nums">${total.toFixed(2)}</span>
             </p>
             <div className="flex items-center gap-2">
@@ -310,10 +315,10 @@ export function SiteCostFormDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={submitting}
               >
-                Cancel
+                {t('cancel')}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Add cost'}
+                {submitting ? t('saving') : isEdit ? t('saveChanges') : t('addCost')}
               </Button>
             </div>
           </div>

@@ -55,6 +55,8 @@ WORKDIR /repo
 
 COPY . .
 
+# Build the worker plus all transitive workspace deps (db, services,
+# integrations, shared) so the runtime stage can run from /repo/.../dist.
 RUN pnpm --filter @siteops/worker... build
 
 # -----------------------------------------------------------------------------
@@ -63,9 +65,9 @@ RUN pnpm --filter @siteops/worker... build
 FROM node:${NODE_VERSION} AS runtime
 ARG ALPINE_MIRROR
 
-# Chromium + the system libs Lighthouse / Puppeteer need.
-# Keeping this in the runtime stage so the placeholder image already has
-# everything T14 will require; no rebuild needed when the real worker lands.
+# Chromium + the system libs Lighthouse / Puppeteer need to render real
+# pages. Combined with `LIGHTHOUSE_RUNNER=real` below, the worker boots
+# with an actual Chromium-driven Lighthouse runner instead of the stub.
 RUN sed -i "s|https\?://dl-cdn.alpinelinux.org/alpine|${ALPINE_MIRROR}|g" /etc/apk/repositories \
  && apk add --no-cache \
       tini \
@@ -81,18 +83,26 @@ RUN sed -i "s|https\?://dl-cdn.alpinelinux.org/alpine|${ALPINE_MIRROR}|g" /etc/a
 # Tell Puppeteer / Lighthouse to use the system Chromium.
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
-    CHROME_PATH=/usr/bin/chromium-browser
+    CHROME_PATH=/usr/bin/chromium-browser \
+    LIGHTHOUSE_RUNNER=real \
+    LIGHTHOUSE_DATA_DIR=/var/lib/siteops/lighthouse \
+    AUDIT_DATA_DIR=/var/lib/siteops/audits
 
+# Copy the full workspace from the build stage. We rely on the symlinked
+# pnpm node_modules so the worker can resolve `@siteops/db`, `services`,
+# `integrations`, `shared` against their compiled `dist/` outputs at runtime.
 WORKDIR /app
+COPY --from=build /repo /app
 
-# T02 placeholder keepalive — replaced by `apps/worker/dist/index.js`
-# (the real BullMQ entrypoint) in T11.
-COPY --from=build /repo/apps/worker/runner.placeholder.cjs /app/runner.js
+# Make sure the data dirs the worker writes to actually exist.
+RUN mkdir -p /var/lib/siteops/lighthouse /var/lib/siteops/audits
+
+WORKDIR /app/apps/worker
 
 ENV NODE_ENV=production
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD pgrep -f "node /app/runner.js" >/dev/null || exit 1
+  CMD pgrep -f "node dist/index.js" >/dev/null || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "/app/runner.js"]
+CMD ["node", "dist/index.js"]

@@ -20,6 +20,7 @@
 | 表格         | TanStack Table          | 8.x              | headless                       |
 | 图表         | Recharts                | 2.x              | 简单足够；复杂图后续换 ECharts |
 | 鉴权         | Auth.js (NextAuth)      | 5（beta 稳定后） | Credentials provider           |
+| i18n         | next-intl               | 3.x              | dashboard UI（zh-CN + en-US）  |
 | 校验         | Zod                     | 3.23+            | 共享 schema                    |
 | 数据库       | PostgreSQL              | 16               | Docker                         |
 | ORM          | Drizzle ORM             | 最新             | 类型安全、轻量、SQL 友好       |
@@ -70,6 +71,12 @@
 ### 2.7 Vitest vs Jest
 
 - **选 Vitest**：原生 ESM、与 Vite 配套、Next.js 15 项目集成更顺。
+
+### 2.8 next-intl vs i18next / react-intl
+
+- **选 next-intl**：App Router + RSC 一等公民，server 组件直接 `await getTranslations()`，无需 hydrate dance；文件体积小、ICU MessageFormat 原生支持。
+- 路由策略：cookie 驱动（`localePrefix: 'never'`），不引 `[locale]/...` 段——保护 M1–M5 已稳定的 75+ 路由文件；后端 API message 保持英文（机器消费契约）。
+- 详见 T28（`tasks/M6-polish/T28-i18n-dashboard.md`）。
 
 ## 3. 不引入的库（MVP）
 

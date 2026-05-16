@@ -1,4 +1,5 @@
 import { Eye, Timer, Users, Zap } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { StatCard } from '@/components/common/stat-card';
 
@@ -51,40 +52,41 @@ function formatDuration(seconds: number | null): string {
  * so operators can spot regressions without doing the math themselves.
  */
 export function TrafficKpiRow({ summary }: { summary: TrafficKpiSummary }) {
+  const t = useTranslations('pages.traffic.kpis');
   return (
     <section
-      aria-label="Traffic KPIs"
+      aria-label={t('ariaLabel')}
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
     >
       <StatCard
-        label="Page views"
+        label={t('pageViews')}
         value={intFmt.format(summary.pv)}
         icon={Eye}
         delta={{ value: deltaText(summary.delta.pv), tone: pickTone(summary.delta.pv) }}
-        hint={`prev ${intFmt.format(summary.pvPrev)}`}
+        hint={t('prev', { value: intFmt.format(summary.pvPrev) })}
       />
       <StatCard
-        label="Unique visitors"
+        label={t('uniqueVisitors')}
         value={intFmt.format(summary.uv)}
         icon={Users}
         delta={{ value: deltaText(summary.delta.uv), tone: pickTone(summary.delta.uv) }}
-        hint={`prev ${intFmt.format(summary.uvPrev)}`}
+        hint={t('prev', { value: intFmt.format(summary.uvPrev) })}
       />
       <StatCard
-        label="Sessions"
+        label={t('sessions')}
         value={intFmt.format(summary.sessions)}
         icon={Zap}
         delta={{ value: deltaText(summary.delta.sessions), tone: pickTone(summary.delta.sessions) }}
-        hint={`prev ${intFmt.format(summary.sessionsPrev)}`}
+        hint={t('prev', { value: intFmt.format(summary.sessionsPrev) })}
       />
       <StatCard
-        label="Avg. session"
+        label={t('avgSession')}
         value={formatDuration(summary.avgSessionSec)}
         icon={Timer}
         hint={
           summary.bounceRate === null
-            ? 'No bounce data'
-            : `bounce ${pctFmt.format(summary.bounceRate)}`
+            ? t('noBounceData')
+            : t('bounce', { rate: pctFmt.format(summary.bounceRate) })
         }
       />
     </section>

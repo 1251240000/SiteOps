@@ -1,9 +1,8 @@
 name: E2E
 
-# Playwright suite is added in M1 (T07+). Until then this workflow is wired
-# up but only does a smoke check so the schedule and manual trigger paths
-# are exercised. Drop the `if: false` from the playwright step and add the
-# real `pnpm test:e2e` invocation once the suite exists.
+# Nightly Playwright suite. Runs the dashboard happy-path against a real
+# Postgres + Redis service container, with the Next.js app booted by the
+# Playwright `webServer` config. Add new specs under `apps/web/e2e/`.
 on:
   workflow_dispatch:
   schedule:
@@ -55,6 +54,10 @@ jobs:
       REDIS_URL: redis://localhost:6379
       AUTH_SECRET: ci-only-do-not-trust
       TURBO_TELEMETRY_DISABLED: '1'
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: ChangeMe123!
+      E2E_ADMIN_EMAIL: admin@example.com
+      E2E_ADMIN_PASSWORD: ChangeMe123!
 
     steps:
       - name: Checkout
@@ -75,13 +78,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Placeholder until M1 ships the Playwright suite. Replace with:
-      #   - run: pnpm exec playwright install --with-deps
-      #   - run: pnpm test:e2e
-      - name: Smoke (placeholder)
-        run: |
-          echo "E2E suite lands in M1 (T07+); workflow is just exercising the schedule for now."
-          pnpm typecheck
+      - name: Build workspace packages
+        # Playwright tests boot the real Next.js dev server, which imports
+        # `@siteops/db`, `@siteops/services`, etc. as built dist outputs.
+        run: pnpm --filter "./packages/*" build
+
+      - name: Apply DB migrations
+        run: pnpm --filter @siteops/db db:migrate
+
+      - name: Seed admin user
+        run: pnpm --filter @siteops/db db:seed
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @siteops/web exec playwright install --with-deps chromium
+
+      - name: Run Playwright suite
+        run: pnpm --filter @siteops/web test:e2e
 
       - name: Upload Playwright report
         if: always()

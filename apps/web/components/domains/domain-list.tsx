@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { parseAsInteger, parseAsString, useQueryState } from 'nuqs';
 import { useMemo } from 'react';
@@ -22,6 +23,8 @@ const SORTABLE: Record<string, { asc: 'expires_at' | 'domain'; desc: '-expires_a
   };
 
 export function DomainList() {
+  const t = useTranslations('pages.domains.list');
+  const tCommon = useTranslations('common');
   const [q] = useQueryState('q', parseAsString.withDefault(''));
   const [expiringWithinDays] = useQueryState('expiringWithinDays', parseAsString.withDefault(''));
   const [sort, setSort] = useQueryState('sort', parseAsString.withDefault('expires_at'));
@@ -75,29 +78,29 @@ export function DomainList() {
                   type="button"
                   onClick={() => onSortClick('domain')}
                   className="inline-flex items-center gap-1 hover:text-foreground"
-                  aria-label="Sort by domain"
+                  aria-label={t('sortByDomain')}
                 >
-                  Domain {renderSortIcon('domain')}
+                  {t('colDomain')} {renderSortIcon('domain')}
                 </button>
               </th>
               <th scope="col" className="px-4 py-3 text-left font-medium">
-                Site
+                {t('colSite')}
               </th>
               <th scope="col" className="px-4 py-3 text-left font-medium">
-                Registrar / DNS
+                {t('colRegistrarDns')}
               </th>
               <th scope="col" className="px-4 py-3 text-left font-medium">
                 <button
                   type="button"
                   onClick={() => onSortClick('expires')}
                   className="inline-flex items-center gap-1 hover:text-foreground"
-                  aria-label="Sort by expiry"
+                  aria-label={t('sortByExpires')}
                 >
-                  Expires {renderSortIcon('expires')}
+                  {t('colExpires')} {renderSortIcon('expires')}
                 </button>
               </th>
               <th scope="col" className="px-4 py-3 text-left font-medium">
-                SSL
+                {t('colSsl')}
               </th>
             </tr>
           </thead>
@@ -115,13 +118,13 @@ export function DomainList() {
             ) : error ? (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-destructive">
-                  {error.message || 'Failed to load domains'}
+                  {error.message || t('loadFailed')}
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
-                  No domains match the current filters.
+                  {t('empty')}
                 </td>
               </tr>
             ) : (
@@ -139,7 +142,7 @@ export function DomainList() {
                   <td className="px-4 py-3 align-middle">
                     <span className="flex items-center gap-2 font-medium text-foreground">
                       {d.domain}
-                      {d.isPrimary ? <Badge variant="success">Primary</Badge> : null}
+                      {d.isPrimary ? <Badge variant="success">{t('primaryBadge')}</Badge> : null}
                     </span>
                   </td>
                   <td className="px-4 py-3 align-middle">
@@ -181,19 +184,27 @@ export function DomainList() {
       <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <span>
           {meta
-            ? `Showing ${items.length ? (meta.page - 1) * meta.limit + 1 : 0}–${(meta.page - 1) * meta.limit + items.length} of ${meta.total}`
+            ? tCommon('pagination.showing', {
+                from: items.length ? (meta.page - 1) * meta.limit + 1 : 0,
+                to: (meta.page - 1) * meta.limit + items.length,
+                total: meta.total,
+              })
             : '\u00A0'}
         </span>
         <div className="flex items-center gap-2">
           <span>
-            Page <strong>{meta?.page ?? page}</strong> of <strong>{meta?.totalPages ?? 1}</strong>
+            {tCommon.rich('pagination.page', {
+              strong: (chunks) => <strong>{chunks}</strong>,
+              page: meta?.page ?? page,
+              total: meta?.totalPages ?? 1,
+            })}
           </span>
           <Button
             size="icon"
             variant="outline"
             disabled={!meta || meta.page <= 1}
             onClick={() => setPage(Math.max(1, (meta?.page ?? page) - 1))}
-            aria-label="Previous page"
+            aria-label={tCommon('pagination.previous')}
           >
             <ChevronLeft className="size-4" />
           </Button>
@@ -202,7 +213,7 @@ export function DomainList() {
             variant="outline"
             disabled={!meta || meta.page >= (meta?.totalPages ?? 1)}
             onClick={() => setPage((meta?.page ?? page) + 1)}
-            aria-label="Next page"
+            aria-label={tCommon('pagination.next')}
           >
             <ChevronRight className="size-4" />
           </Button>

@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, GitBranch } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +12,8 @@ import { api, type ApiError, type ApiSuccess } from '@/lib/api-client';
 import { deploymentsKeys, type Deployment } from '@/lib/queries/deployments';
 
 export function DeploymentTimeline({ siteId }: { siteId: string }) {
+  const t = useTranslations('pages.deployments.timeline');
+  const tList = useTranslations('pages.deployments.list');
   const {
     data: envelope,
     error,
@@ -34,7 +37,7 @@ export function DeploymentTimeline({ siteId }: { siteId: string }) {
     return (
       <Card>
         <CardContent className="py-10 text-center text-destructive">
-          {error.message || 'Failed to load deployments'}
+          {error.message || tList('loadFailed')}
         </CardContent>
       </Card>
     );
@@ -43,8 +46,10 @@ export function DeploymentTimeline({ siteId }: { siteId: string }) {
     return (
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground">
-          No deployments recorded for this site yet. POST one to{' '}
-          <code className="font-mono">/api/v1/sites/{siteId}/deployments</code>.
+          {t.rich('empty', {
+            siteId,
+            code: (chunks) => <code className="font-mono">{chunks}</code>,
+          })}
         </CardContent>
       </Card>
     );
@@ -69,10 +74,14 @@ export function DeploymentTimeline({ siteId }: { siteId: string }) {
                   </span>
                 ) : null}
                 {d.provider ? (
-                  <span className="text-xs text-muted-foreground">via {d.provider}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('via', { provider: d.provider })}
+                  </span>
                 ) : null}
                 {d.triggeredBy ? (
-                  <span className="text-xs text-muted-foreground">by {d.triggeredBy}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('by', { actor: d.triggeredBy })}
+                  </span>
                 ) : null}
               </div>
               {d.commitMessage ? (
@@ -93,7 +102,7 @@ export function DeploymentTimeline({ siteId }: { siteId: string }) {
                       rel="noreferrer"
                       className="inline-flex items-center text-primary hover:underline"
                     >
-                      build log <ArrowUpRight className="size-3" />
+                      {t('buildLog')} <ArrowUpRight className="size-3" />
                     </a>
                   </>
                 ) : null}

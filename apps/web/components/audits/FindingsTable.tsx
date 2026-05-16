@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl';
+
 import { SeverityBadge } from './SeverityBadge';
 
 export type FindingRow = {
@@ -12,11 +14,12 @@ export type FindingRow = {
 const ORDER: Record<string, number> = { critical: 0, error: 1, warning: 2, info: 3 };
 
 export function FindingsTable({ items }: { items: FindingRow[] }) {
+  const t = useTranslations('pages.audits.findings');
   const sorted = [...items].sort((a, b) => (ORDER[a.severity] ?? 9) - (ORDER[b.severity] ?? 9));
   if (sorted.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-border bg-success/10 p-6 text-center text-sm text-success">
-        No findings — this audit looks clean.
+        {t('empty')}
       </p>
     );
   }

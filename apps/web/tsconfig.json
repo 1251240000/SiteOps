@@ -30,6 +30,10 @@
     "next.config.mjs",
     "tailwind.config.ts",
     "types/**/*",
+    "__tests__/**/*",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "e2e/**/*",
     ".next/types/**/*.ts"
   ],
   "exclude": ["dist", ".next", "node_modules"]

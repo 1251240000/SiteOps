@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -20,6 +21,7 @@ export function SiteCostsSection({
   siteId: string;
   initialRows: SiteCostRow[];
 }) {
+  const t = useTranslations('pages.roi.costs');
   const [rows, setRows] = useState<SiteCostRow[]>(initialRows);
 
   const refresh = useCallback(async () => {
@@ -27,10 +29,10 @@ export function SiteCostsSection({
       const res = await api.get<SiteCostRow[]>(`/roi/sites/${siteId}/costs`);
       setRows(res.data);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Failed to refresh costs';
+      const message = err instanceof ApiError ? err.message : t('refreshFailed');
       toast.error(message);
     }
-  }, [siteId]);
+  }, [siteId, t]);
 
   // Re-sync if the parent passes new initialRows (date range change, etc.)
   useEffect(() => {

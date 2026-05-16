@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
   CartesianGrid,
@@ -20,17 +21,17 @@ export type TrafficSeriesPoint = {
   sessions: number;
 };
 
+type MetricKey = 'pv' | 'uv' | 'sessions';
 type Metric = {
-  key: 'pv' | 'uv' | 'sessions';
-  label: string;
+  key: MetricKey;
   /** Tailwind colour token used in the legend pill. */
   color: string;
 };
 
 const METRICS: ReadonlyArray<Metric> = [
-  { key: 'pv', label: 'Page views', color: 'text-primary' },
-  { key: 'uv', label: 'Unique visitors', color: 'text-success' },
-  { key: 'sessions', label: 'Sessions', color: 'text-warning' },
+  { key: 'pv', color: 'text-primary' },
+  { key: 'uv', color: 'text-success' },
+  { key: 'sessions', color: 'text-warning' },
 ];
 
 const intFmt = new Intl.NumberFormat('en-US');
@@ -48,26 +49,28 @@ export function TrafficLineChart({
   data: TrafficSeriesPoint[];
   granularity: 'day' | 'week';
 }) {
-  const [active, setActive] = useState<Metric['key']>('pv');
+  const t = useTranslations('pages.traffic.chart');
+  const tMetric = useTranslations('pages.traffic.chart.metric');
+  const [active, setActive] = useState<MetricKey>('pv');
 
   if (data.length === 0) {
     return (
       <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 text-sm text-muted-foreground">
-        No traffic data in the selected window.
+        {t('empty')}
       </div>
     );
   }
 
-  const tickFormatter = (v: string): string => formatBucket(v, granularity);
+  const tickFormatter = (v: string): string => formatBucket(v, granularity, t);
 
   return (
     <section
-      aria-label="Traffic chart"
+      aria-label={t('ariaLabel')}
       className="space-y-3 rounded-lg border border-border bg-card p-4"
     >
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Traffic over time</h2>
-        <div role="tablist" aria-label="Metric" className="flex flex-wrap gap-1">
+        <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
+        <div role="tablist" aria-label={t('metricAriaLabel')} className="flex flex-wrap gap-1">
           {METRICS.map((m) => {
             const isActive = m.key === active;
             return (
@@ -88,7 +91,7 @@ export function TrafficLineChart({
                   className={cn('inline-block size-2 rounded-full bg-current', m.color)}
                   aria-hidden
                 />
-                {m.label}
+                {tMetric(m.key)}
               </button>
             );
           })}
@@ -122,7 +125,7 @@ export function TrafficLineChart({
                 color: 'hsl(var(--foreground))',
                 fontSize: 12,
               }}
-              labelFormatter={(label: string) => formatBucket(label, granularity)}
+              labelFormatter={(label: string) => formatBucket(label, granularity, t)}
               formatter={(value: unknown) =>
                 typeof value === 'number' ? intFmt.format(value) : String(value)
               }
@@ -143,11 +146,15 @@ export function TrafficLineChart({
   );
 }
 
-function formatBucket(date: string, granularity: 'day' | 'week'): string {
+function formatBucket(
+  date: string,
+  granularity: 'day' | 'week',
+  t: (key: 'weekBucket' | 'dayBucket', values: { date: string }) => string,
+): string {
   // Both `day` and `week` buckets are anchored to a real date in the SQL
   // aggregation; "week of <date>" is the conventional UX presentation.
   const month = date.slice(5, 7);
   const day = date.slice(8, 10);
-  if (granularity === 'week') return `wk ${month}-${day}`;
-  return `${month}-${day}`;
+  const formatted = `${month}-${day}`;
+  return t(granularity === 'week' ? 'weekBucket' : 'dayBucket', { date: formatted });
 }

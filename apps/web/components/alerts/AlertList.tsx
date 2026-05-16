@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ type AlertRow = {
 };
 
 export function AlertList() {
+  const t = useTranslations('pages.alerts.list');
   const qc = useQueryClient();
   const { data, isLoading, error } = useQuery<ApiSuccess<AlertRow[]>, ApiError>({
     queryKey: ['alerts', 'list'],
@@ -36,7 +38,7 @@ export function AlertList() {
     mutationFn: (id) => api.post(`/alerts/${id}/ack`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['alerts'] });
-      toast.success('Alert resolved');
+      toast.success(t('resolvedToast'));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -62,7 +64,7 @@ export function AlertList() {
   if (items.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-border bg-success/10 p-6 text-center text-sm text-success">
-        No alerts. The monitoring stack is happy.
+        {t('empty')}
       </p>
     );
   }
@@ -75,16 +77,22 @@ export function AlertList() {
         >
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={a.status === 'firing' ? 'destructive' : 'success'}>{a.status}</Badge>
-              <span className="font-medium">{a.message ?? '(no message)'}</span>
+              <Badge variant={a.status === 'firing' ? 'destructive' : 'success'}>
+                {a.status === 'firing' ? t('statusFiring') : t('statusResolved')}
+              </Badge>
+              <span className="font-medium">{a.message ?? t('noMessage')}</span>
             </div>
             <p className="font-mono text-xs text-muted-foreground">
-              fired {new Date(a.firedAt).toISOString()}
-              {a.resolvedAt ? ` · resolved ${new Date(a.resolvedAt).toISOString()}` : ''}
+              {a.resolvedAt
+                ? t('firedResolvedAt', {
+                    firedAt: new Date(a.firedAt).toISOString(),
+                    resolvedAt: new Date(a.resolvedAt).toISOString(),
+                  })
+                : t('firedAt', { date: new Date(a.firedAt).toISOString() })}
             </p>
             {a.notifiedChannels && a.notifiedChannels.length > 0 ? (
               <p className="font-mono text-xs text-muted-foreground">
-                Last delivery:{' '}
+                {t('lastDelivery')}{' '}
                 {a.notifiedChannels.slice(-1).map((d) => (
                   <span key={d.channel_id}>
                     {d.ok ? '✓' : '✗'} {d.channel_id.slice(0, 8)}
@@ -97,7 +105,7 @@ export function AlertList() {
           <div>
             {a.status === 'firing' ? (
               <Button size="sm" variant="outline" onClick={() => ackMut.mutate(a.id)}>
-                Mark resolved
+                {t('markResolved')}
               </Button>
             ) : null}
           </div>

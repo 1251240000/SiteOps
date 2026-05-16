@@ -1,6 +1,7 @@
 'use client';
 
 import { Search } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { parseAsBoolean, parseAsString, useQueryState } from 'nuqs';
 import { useEffect, useState } from 'react';
 
@@ -23,6 +24,9 @@ const ANY_VALUE = '__any__';
  * search input debounces by 250 ms to keep the network quiet while typing.
  */
 export function SiteFilters() {
+  const t = useTranslations('pages.sites.filters');
+  const tEnumStatus = useTranslations('enums.siteStatus');
+  const tEnumType = useTranslations('enums.siteType');
   const [q, setQ] = useQueryState('q', parseAsString.withDefault(''));
   const [siteType, setSiteType] = useQueryState('siteType', parseAsString.withDefault(''));
   const [status, setStatus] = useQueryState('status', parseAsString.withDefault(''));
@@ -53,17 +57,17 @@ export function SiteFilters() {
 
   return (
     <section
-      aria-label="Site filters"
+      aria-label={t('ariaLabel')}
       className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 md:flex-row md:items-end md:gap-4"
     >
       <div className="flex-1 space-y-1.5">
-        <Label htmlFor="filter-q">Search</Label>
+        <Label htmlFor="filter-q">{t('search')}</Label>
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="filter-q"
             value={draftQ}
-            placeholder="Name, slug, or URL…"
+            placeholder={t('searchPlaceholder')}
             className="pl-8"
             onChange={(e) => setDraftQ(e.target.value)}
           />
@@ -71,7 +75,7 @@ export function SiteFilters() {
       </div>
 
       <div className="w-full space-y-1.5 md:w-40">
-        <Label htmlFor="filter-type">Type</Label>
+        <Label htmlFor="filter-type">{t('typeLabel')}</Label>
         <Select
           value={siteType || ANY_VALUE}
           onValueChange={(v) => {
@@ -80,13 +84,13 @@ export function SiteFilters() {
           }}
         >
           <SelectTrigger id="filter-type">
-            <SelectValue placeholder="Any" />
+            <SelectValue placeholder={t('anyPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ANY_VALUE}>Any type</SelectItem>
-            {SITE_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
+            <SelectItem value={ANY_VALUE}>{t('anyType')}</SelectItem>
+            {SITE_TYPES.map((siteTypeKey) => (
+              <SelectItem key={siteTypeKey} value={siteTypeKey}>
+                {tEnumType(siteTypeKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -94,7 +98,7 @@ export function SiteFilters() {
       </div>
 
       <div className="w-full space-y-1.5 md:w-40">
-        <Label htmlFor="filter-status">Status</Label>
+        <Label htmlFor="filter-status">{t('statusLabel')}</Label>
         <Select
           value={status || ANY_VALUE}
           onValueChange={(v) => {
@@ -103,13 +107,13 @@ export function SiteFilters() {
           }}
         >
           <SelectTrigger id="filter-status">
-            <SelectValue placeholder="Any" />
+            <SelectValue placeholder={t('anyPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ANY_VALUE}>Any status</SelectItem>
-            {SITE_STATUS.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
+            <SelectItem value={ANY_VALUE}>{t('anyStatus')}</SelectItem>
+            {SITE_STATUS.map((statusKey) => (
+              <SelectItem key={statusKey} value={statusKey}>
+                {tEnumStatus(statusKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -126,7 +130,7 @@ export function SiteFilters() {
           }}
           className="h-4 w-4 rounded border-input"
         />
-        Show archived
+        {t('showArchived')}
       </label>
     </section>
   );

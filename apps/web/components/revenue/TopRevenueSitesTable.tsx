@@ -2,6 +2,7 @@
 
 import { type ColumnDef } from '@tanstack/react-table';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { DataTable } from '@/components/common/data-table';
@@ -27,11 +28,12 @@ const usd = new Intl.NumberFormat('en-US', {
  * the API payload (`adRevenue`, `affiliateRevenue`, `total`).
  */
 export function TopRevenueSitesTable({ rows }: { rows: TopRevenueRow[] }) {
+  const t = useTranslations('pages.revenue.topSites');
   const columns = useMemo<ColumnDef<TopRevenueRow>[]>(() => {
     return [
       {
         accessorKey: 'name',
-        header: 'Site',
+        header: t('colSite'),
         cell: ({ row }) => {
           const r = row.original;
           return (
@@ -49,7 +51,7 @@ export function TopRevenueSitesTable({ rows }: { rows: TopRevenueRow[] }) {
       },
       {
         accessorKey: 'adRevenue',
-        header: 'AdSense',
+        header: t('colAdSense'),
         cell: ({ row }) => (
           <span className={cellTone(row.original.adRevenue)}>
             {usd.format(row.original.adRevenue)}
@@ -58,7 +60,7 @@ export function TopRevenueSitesTable({ rows }: { rows: TopRevenueRow[] }) {
       },
       {
         accessorKey: 'affiliateRevenue',
-        header: 'Affiliate',
+        header: t('colAffiliate'),
         cell: ({ row }) => (
           <span className={cellTone(row.original.affiliateRevenue)}>
             {usd.format(row.original.affiliateRevenue)}
@@ -67,7 +69,7 @@ export function TopRevenueSitesTable({ rows }: { rows: TopRevenueRow[] }) {
       },
       {
         accessorKey: 'total',
-        header: 'Total',
+        header: t('colTotal'),
         cell: ({ row }) => (
           <span className="font-medium tabular-nums text-foreground">
             {usd.format(row.original.total)}
@@ -75,20 +77,17 @@ export function TopRevenueSitesTable({ rows }: { rows: TopRevenueRow[] }) {
         ),
       },
     ];
-  }, []);
+  }, [t]);
 
   return (
-    <section aria-label="Top revenue sites" className="space-y-2">
+    <section aria-label={t('ariaLabel')} className="space-y-2">
       <header className="flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Top sites by revenue</h2>
-        <span className="text-xs text-muted-foreground">{rows.length} sites</span>
+        <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
+        <span className="text-xs text-muted-foreground">
+          {t('sitesCount', { count: rows.length })}
+        </span>
       </header>
-      <DataTable
-        data={rows}
-        columns={columns}
-        pageSize={10}
-        emptyMessage="No revenue recorded for any site in this window."
-      />
+      <DataTable data={rows} columns={columns} pageSize={10} emptyMessage={t('empty')} />
     </section>
   );
 }

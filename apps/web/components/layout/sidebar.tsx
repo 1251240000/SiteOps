@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -20,6 +21,8 @@ function isActive(pathname: string, href: string): boolean {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const tNav = useTranslations('nav');
+  const tSide = useTranslations('sidebar');
   const [collapsed, setCollapsed] = useState<boolean>(false);
 
   // Read the persisted preference after mount — avoids hydration mismatches
@@ -47,7 +50,7 @@ export function Sidebar() {
 
   return (
     <aside
-      aria-label="Primary"
+      aria-label={tSide('primaryAriaLabel')}
       className={cn(
         'sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-card transition-[width] duration-200 ease-out lg:flex',
         collapsed ? 'w-[68px]' : 'w-60',
@@ -77,7 +80,7 @@ export function Sidebar() {
         <button
           type="button"
           onClick={toggle}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? tSide('expand') : tSide('collapse')}
           aria-pressed={collapsed}
           className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
@@ -85,10 +88,11 @@ export function Sidebar() {
         </button>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 p-2" aria-label="Sections">
+      <nav className="flex flex-1 flex-col gap-1 p-2" aria-label={tNav('sectionsAriaLabel')}>
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
+          const label = tNav(item.key);
           const link = (
             <Link
               key={item.href}
@@ -103,7 +107,7 @@ export function Sidebar() {
               )}
             >
               <Icon className="size-4 shrink-0" aria-hidden />
-              <span className={cn(collapsed && 'sr-only')}>{item.label}</span>
+              <span className={cn(collapsed && 'sr-only')}>{label}</span>
             </Link>
           );
 
@@ -111,7 +115,7 @@ export function Sidebar() {
           return collapsed ? (
             <Tooltip key={item.href}>
               <TooltipTrigger asChild>{link}</TooltipTrigger>
-              <TooltipContent side="right">{item.label}</TooltipContent>
+              <TooltipContent side="right">{label}</TooltipContent>
             </Tooltip>
           ) : (
             link
@@ -120,7 +124,9 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-border p-3 text-xs text-muted-foreground">
-        <span className={cn(collapsed && 'sr-only')}>v0.0.0 · {new Date().getFullYear()}</span>
+        <span className={cn(collapsed && 'sr-only')}>
+          {tSide('footer', { version: '0.0.0', year: new Date().getFullYear() })}
+        </span>
       </div>
     </aside>
   );

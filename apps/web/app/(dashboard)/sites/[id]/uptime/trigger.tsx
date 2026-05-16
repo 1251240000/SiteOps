@@ -2,6 +2,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ export function TriggerUptimeCheck({ siteId }: { siteId: string }) {
   const queryClient = useQueryClient();
   const [pending, startTransition] = useTransition();
   const [requesting, setRequesting] = useState(false);
+  const t = useTranslations('pages.uptime.trigger');
 
   async function onClick() {
     setRequesting(true);
@@ -22,8 +24,8 @@ export function TriggerUptimeCheck({ siteId }: { siteId: string }) {
       const res = await api.post<{ check: { ok: boolean }; newHealthScore: number }>(
         `/sites/${siteId}/uptime-check`,
       );
-      toast.success(res.data.check.ok ? 'Uptime check passed' : 'Uptime check failed', {
-        description: `Health score is now ${res.data.newHealthScore}`,
+      toast.success(res.data.check.ok ? t('passedToast') : t('failedToast'), {
+        description: t('healthScoreDescription', { score: res.data.newHealthScore }),
       });
       startTransition(() => {
         router.refresh();
@@ -31,8 +33,8 @@ export function TriggerUptimeCheck({ siteId }: { siteId: string }) {
       await queryClient.invalidateQueries({ queryKey: ['sites'] });
     } catch (err) {
       const e = err as ApiError;
-      toast.error('Could not check the site', {
-        description: e.message ?? 'Unknown error',
+      toast.error(t('errorToast'), {
+        description: e.message ?? t('unknownError'),
       });
     } finally {
       setRequesting(false);
@@ -42,7 +44,7 @@ export function TriggerUptimeCheck({ siteId }: { siteId: string }) {
   return (
     <Button size="sm" variant="outline" onClick={onClick} disabled={requesting || pending}>
       <RefreshCw className={requesting ? 'animate-spin' : undefined} />
-      Check now
+      {t('checkNow')}
     </Button>
   );
 }

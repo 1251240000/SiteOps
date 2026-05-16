@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
 import { siteIdParamSchema } from '@siteops/shared';
@@ -24,14 +25,12 @@ export default async function SiteOverviewPage({ params }: { params: Promise<{ i
     throw err;
   }
 
+  const t = await getTranslations('pages.sites.detail');
   return (
     <div className="space-y-6">
       <SiteSummary site={site} />
       <DomainCard siteId={site.id} />
-      <EmptyState
-        title="More widgets coming in M2"
-        description="Uptime sparkline, recent audits, deployment timeline, and error rate plug in as their tasks ship."
-      />
+      <EmptyState title={t('emptyTitle')} description={t('emptyDescription')} />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { LogOut, UserRound } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -27,13 +28,15 @@ function initials(name: string | null, email: string): string {
 }
 
 export function UserMenu({ email, name }: UserMenuProps) {
+  const t = useTranslations('topbar');
+  const displayName = name ?? t('accountDefaultName');
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Account menu for ${name ?? email}`}
+          aria-label={t('accountAriaLabel', { name: name ?? email })}
           className="size-9 rounded-full"
         >
           <span
@@ -48,7 +51,7 @@ export function UserMenu({ email, name }: UserMenuProps) {
         <DropdownMenuLabel className="flex items-center gap-2">
           <UserRound className="size-4" />
           <div className="flex min-w-0 flex-col">
-            <span className="truncate font-medium">{name ?? 'Admin'}</span>
+            <span className="truncate font-medium">{displayName}</span>
             <span className="truncate text-xs font-normal text-muted-foreground">{email}</span>
           </div>
         </DropdownMenuLabel>
@@ -58,7 +61,7 @@ export function UserMenu({ email, name }: UserMenuProps) {
             void signOut({ callbackUrl: '/login' });
           }}
         >
-          <LogOut className="size-4" /> Sign out
+          <LogOut className="size-4" /> {t('signOut')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

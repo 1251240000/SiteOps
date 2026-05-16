@@ -100,11 +100,19 @@ services:
     restart: unless-stopped
     environment:
       <<: *web-env
+      # Boots Chromium-backed Lighthouse runner; the image already ships the
+      # binary + the optional `lighthouse` / `chrome-launcher` deps.
+      LIGHTHOUSE_RUNNER: ${LIGHTHOUSE_RUNNER:-real}
+      LIGHTHOUSE_DATA_DIR: /var/lib/siteops/lighthouse
+      AUDIT_DATA_DIR: /var/lib/siteops/audits
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - lighthouse-data:/var/lib/siteops/lighthouse
+      - audit-data:/var/lib/siteops/audits
     networks:
       - siteops-net
 
@@ -133,6 +141,7 @@ volumes:
   caddy-data:
   caddy-config:
   lighthouse-data:
+  audit-data:
 
 networks:
   siteops-net:

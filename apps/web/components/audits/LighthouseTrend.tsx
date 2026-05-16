@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 export type LhTrendPoint = {
   startedAt: string | Date;
   performance: number;
@@ -7,10 +9,11 @@ export type LhTrendPoint = {
 
 /** Tiny SVG sparkline for the last N performance scores. */
 export function LighthouseTrend({ points }: { points: LhTrendPoint[] }) {
+  const t = useTranslations('pages.audits.trend');
   if (points.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-        Run Lighthouse a few times to see a trend.
+        {t('empty')}
       </p>
     );
   }
@@ -38,7 +41,7 @@ export function LighthouseTrend({ points }: { points: LhTrendPoint[] }) {
         <path d={d} fill="none" className="stroke-primary" strokeWidth={1.5} />
       </svg>
       <div className="text-xs text-muted-foreground">
-        <div>Latest</div>
+        <div>{t('latest')}</div>
         <div className="text-base font-semibold text-foreground">
           {Math.round(last.performance * 100)}
         </div>

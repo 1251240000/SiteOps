@@ -1,3 +1,7 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +15,7 @@ export interface ExpiryCellProps {
 
 /** Renders a date plus a "in N days" badge, coloured by urgency. */
 export function ExpiryCell({ date, daysUntil, warnWithinDays = 30, className }: ExpiryCellProps) {
+  const t = useTranslations('common.expiry');
   if (!date) {
     return <span className={cn('text-muted-foreground', className)}>—</span>;
   }
@@ -25,10 +30,10 @@ export function ExpiryCell({ date, daysUntil, warnWithinDays = 30, className }: 
     daysUntil === null
       ? date
       : expired
-        ? `${Math.abs(daysUntil)}d ago`
+        ? t('daysAgo', { days: Math.abs(daysUntil) })
         : daysUntil === 0
-          ? 'today'
-          : `in ${daysUntil}d`;
+          ? t('today')
+          : t('inDays', { days: daysUntil });
   return (
     <span className={cn('flex items-center gap-2', className)}>
       <time dateTime={date} className="tabular-nums text-foreground">

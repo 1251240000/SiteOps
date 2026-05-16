@@ -1,3 +1,5 @@
+import { getTranslations } from 'next-intl/server';
+
 import { PageHeader } from '@/components/common/page-header';
 import { AlertList } from '@/components/alerts/AlertList';
 import { ChannelEditor } from '@/components/alerts/ChannelEditor';
@@ -6,18 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const dynamic = 'force-dynamic';
 
-export default function AlertsPage() {
+export default async function AlertsPage() {
+  const t = await getTranslations('pages.alerts');
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Alerts"
-        description="Rules evaluate every metric; channels send the notification. Channel configs are encrypted at rest (AES-256-GCM)."
-      />
+      <PageHeader title={t('title')} description={t('description')} />
       <Tabs defaultValue="history">
         <TabsList>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="rules">Rules</TabsTrigger>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
+          <TabsTrigger value="history">{t('tabHistory')}</TabsTrigger>
+          <TabsTrigger value="rules">{t('tabRules')}</TabsTrigger>
+          <TabsTrigger value="channels">{t('tabChannels')}</TabsTrigger>
         </TabsList>
         <TabsContent value="history" className="mt-4">
           <AlertList />

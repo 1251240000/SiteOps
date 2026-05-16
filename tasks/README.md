@@ -107,9 +107,9 @@
 
 | ID                                           | 标题                             | 状态 | 前置     |
 | -------------------------------------------- | -------------------------------- | ---- | -------- |
-| [T22](./M4-revenue/T22-traffic-dashboard.md) | 流量看板（单站 + 全局）          | ⬜   | T19, T20 |
-| [T23](./M4-revenue/T23-revenue-dashboard.md) | 收入看板（Ads + Affiliate 手动） | ⬜   | T21      |
-| [T24](./M4-revenue/T24-roi-evaluation.md)    | ROI 计算与低效站点识别           | ⬜   | T22, T23 |
+| [T22](./M4-revenue/T22-traffic-dashboard.md) | 流量看板（单站 + 全局）          | ✅   | T19, T20 |
+| [T23](./M4-revenue/T23-revenue-dashboard.md) | 收入看板（Ads + Affiliate 手动） | ✅   | T21      |
+| [T24](./M4-revenue/T24-roi-evaluation.md)    | ROI 计算与低效站点识别           | ✅   | T22, T23 |
 
 里程碑概览见 [`M4-revenue/README.md`](./M4-revenue/README.md)。
 
@@ -124,6 +124,22 @@
 | [T25](./M5-automation/T25-task-queue-api.md)      | Task Queue REST 接口（给 Agent 用） | ⬜   | T06, T08 |
 | [T26](./M5-automation/T26-agent-runs-tracking.md) | Agent 调用审计表与看板              | ⬜   | T25      |
 | [T27](./M5-automation/T27-webhook-receiver.md)    | CF/GitHub webhook 接收              | ⬜   | T17, T18 |
+
+里程碑概览见 [`M5-automation/README.md`](./M5-automation/README.md)。
+
+**里程碑完成条件**：`POST /tasks` → `POST /tasks/claim` → `complete` 端到端走通；`/agent-runs` 仪表盘展示真实调用与 p95 latency；CF/GH webhook 实事件能签名校验入库并落到 `deployments`。
+
+---
+
+### M6 · 体验打磨（P2，约 6h）
+
+| ID                                       | 标题                                 | 状态 | 前置 |
+| ---------------------------------------- | ------------------------------------ | ---- | ---- |
+| [T28](./M6-polish/T28-i18n-dashboard.md) | Dashboard UI 国际化（zh-CN + en-US） | ⬜   | T07  |
+
+里程碑概览见 [`M6-polish/README.md`](./M6-polish/README.md)。后续 a11y、移动端、OpenAPI client、命令面板等「非新功能但提升使用质感」的工作都会落在这里。
+
+**里程碑完成条件**：dashboard 默认 zh-CN 且顶栏可切 en-US；两份 catalog key 集合一致；e2e 套件强制 en-US cookie 后仍全绿。
 
 ---
 
@@ -145,6 +161,7 @@ T01 ── T02 ── T11
  │        │                                        │
  └─ T05   └─ T25 ─ T26                  T17/T18 ─ T27
                                                 └─ T24
+                              T07 ─ T28
 ```
 
 ## 估时汇总
@@ -157,5 +174,6 @@ T01 ── T02 ── T11
 | M3     | 30 h | 112 h |
 | M4     | 18 h | 130 h |
 | M5     | 18 h | 148 h |
+| M6     |  6 h | 154 h |
 
-按每天有效 5h、每周 5 天 → ~6 周完成全部 5 个里程碑。MVP 核心（M0+M1+M2）约 3.2 周。
+按每天有效 5h、每周 5 天 → ~6.2 周完成全部 6 个里程碑。MVP 核心（M0+M1+M2）约 3.2 周；M6 是发布后再做的体验打磨，不阻塞 MVP 上线。

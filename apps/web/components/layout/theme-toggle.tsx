@@ -1,6 +1,7 @@
 'use client';
 
 import { Laptop, Moon, Sun } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
@@ -20,6 +21,7 @@ import {
  * `aria-label`. This is the recommended next-themes pattern.
  */
 export function ThemeToggle() {
+  const t = useTranslations('topbar');
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -29,6 +31,8 @@ export function ThemeToggle() {
 
   const active = (mounted && theme) || 'system';
   const Icon = mounted ? (resolvedTheme === 'dark' ? Moon : Sun) : Sun;
+  const activeLabel =
+    active === 'light' ? t('themeLight') : active === 'dark' ? t('themeDark') : t('themeSystem');
 
   return (
     <DropdownMenu>
@@ -36,20 +40,22 @@ export function ThemeToggle() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label={mounted ? `Theme (current: ${active})` : 'Theme'}
+          aria-label={
+            mounted ? t('themeAriaLabel', { active: activeLabel }) : t('themeAriaLabelLoading')
+          }
         >
           <Icon className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-36">
         <DropdownMenuItem onSelect={() => setTheme('light')}>
-          <Sun className="size-4" /> Light
+          <Sun className="size-4" /> {t('themeLight')}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setTheme('dark')}>
-          <Moon className="size-4" /> Dark
+          <Moon className="size-4" /> {t('themeDark')}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setTheme('system')}>
-          <Laptop className="size-4" /> System
+          <Laptop className="size-4" /> {t('themeSystem')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

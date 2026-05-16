@@ -1,4 +1,5 @@
 import { Coins, DollarSign, TrendingUp } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { StatCard } from '@/components/common/stat-card';
 
@@ -46,33 +47,42 @@ function roiTone(value: number | null): 'positive' | 'negative' | 'neutral' {
  * selected window.
  */
 export function RoiKpiRow({ summary }: { summary: RoiKpiSummary }) {
+  const t = useTranslations('pages.roi.kpis');
   return (
-    <section aria-label="ROI KPIs" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="Revenue" value={usdFmt.format(summary.revenue)} icon={DollarSign} />
+    <section
+      aria-label={t('ariaLabel')}
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+    >
+      <StatCard label={t('revenue')} value={usdFmt.format(summary.revenue)} icon={DollarSign} />
       <StatCard
-        label="Cost"
+        label={t('cost')}
         value={usdFmt.format(summary.cost)}
         icon={Coins}
-        hint={summary.cost === 0 ? 'No cost recorded' : undefined}
+        hint={summary.cost === 0 ? t('costNoneHint') : undefined}
       />
       <StatCard
-        label="Profit"
+        label={t('profit')}
         value={usdFmt.format(summary.profit)}
         delta={{
-          value: summary.profit >= 0 ? '↑ profit' : '↓ loss',
+          value: summary.profit >= 0 ? t('profitUp') : t('profitDown'),
           tone: profitTone(summary.profit),
         }}
       />
       <StatCard
-        label="ROI"
-        value={summary.roi === null ? 'N/A' : roiFmt.format(summary.roi)}
+        label={t('roi')}
+        value={summary.roi === null ? t('naValue') : roiFmt.format(summary.roi)}
         icon={TrendingUp}
         delta={
           summary.roi === null
             ? undefined
-            : { value: summary.roi >= 0 ? '↑ in profit' : '↓ in loss', tone: roiTone(summary.roi) }
+            : {
+                value: summary.roi >= 0 ? t('roiInProfit') : t('roiInLoss'),
+                tone: roiTone(summary.roi),
+              }
         }
-        hint={summary.rpm === null ? 'No PV data' : `RPM ${rpmFmt.format(summary.rpm)}`}
+        hint={
+          summary.rpm === null ? t('noPvData') : t('rpmHint', { value: rpmFmt.format(summary.rpm) })
+        }
       />
     </section>
   );

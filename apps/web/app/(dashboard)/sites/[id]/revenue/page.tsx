@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
 import {
@@ -8,7 +9,7 @@ import {
 } from '@siteops/services';
 import { isAppError, siteIdParamSchema } from '@siteops/shared';
 
-import { DateRangePicker, resolveRange } from '@/components/traffic/DateRangePicker';
+import { DateRangePicker } from '@/components/traffic/DateRangePicker';
 import { AffiliateEntriesTable } from '@/components/revenue/AffiliateEntriesTable';
 import { RevenueKpiRow } from '@/components/revenue/RevenueKpiRow';
 import { RevenueStackedBarChart } from '@/components/revenue/RevenueStackedBarChart';
@@ -17,6 +18,7 @@ import { SiteCostsSection } from '@/components/roi/SiteCostsSection';
 import type { SiteCostRow } from '@/components/roi/SiteCostsTable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getDb } from '@/lib/db';
+import { resolveRange } from '@/lib/date-range';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +84,7 @@ export default async function SiteRevenuePage({ params, searchParams }: PageProp
 
   const db = getDb();
   const deps = { db };
+  const tTabs = await getTranslations('pages.revenue.siteTabs');
   try {
     await siteSvc.siteService.getById({ db }, parsed.data.id);
 
@@ -126,8 +129,8 @@ export default async function SiteRevenuePage({ params, searchParams }: PageProp
 
         <Tabs defaultValue="revenue" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="revenue">Revenue</TabsTrigger>
-            <TabsTrigger value="costs">Costs</TabsTrigger>
+            <TabsTrigger value="revenue">{tTabs('revenue')}</TabsTrigger>
+            <TabsTrigger value="costs">{tTabs('costs')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="revenue" className="space-y-6">

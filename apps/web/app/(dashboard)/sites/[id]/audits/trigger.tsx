@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
@@ -11,6 +12,7 @@ export function TriggerAudit({ siteId }: { siteId: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [requesting, setRequesting] = useState(false);
+  const t = useTranslations('pages.audits.trigger');
 
   async function run(type: 'seo' | 'lighthouse', asAsync = false) {
     setRequesting(true);
@@ -21,16 +23,19 @@ export function TriggerAudit({ siteId }: { siteId: string }) {
         enqueued?: boolean;
       }>(`/sites/${siteId}/audits`, { type, async: asAsync });
       if (res.data.enqueued) {
-        toast.success(`${type} audit queued`, { description: 'Will run shortly' });
+        toast.success(t('queuedTitle', { type }), { description: t('queuedDescription') });
       } else if (res.data.summary) {
-        toast.success(`${type} audit complete`, {
-          description: `Score ${res.data.summary.score}/100 · ${res.data.summary.total} findings`,
+        toast.success(t('completeTitle', { type }), {
+          description: t('completeDescription', {
+            score: res.data.summary.score,
+            total: res.data.summary.total,
+          }),
         });
       }
       startTransition(() => router.refresh());
     } catch (err) {
       const e = err as ApiError;
-      toast.error(`Could not run ${type} audit`, { description: e.message });
+      toast.error(t('failedToast', { type }), { description: e.message });
     } finally {
       setRequesting(false);
     }
@@ -44,7 +49,7 @@ export function TriggerAudit({ siteId }: { siteId: string }) {
         disabled={requesting || pending}
         onClick={() => run('seo', false)}
       >
-        Run SEO audit
+        {t('runSeo')}
       </Button>
       <Button
         variant="outline"
@@ -52,7 +57,7 @@ export function TriggerAudit({ siteId }: { siteId: string }) {
         disabled={requesting || pending}
         onClick={() => run('lighthouse', true)}
       >
-        Queue Lighthouse
+        {t('queueLighthouse')}
       </Button>
     </div>
   );

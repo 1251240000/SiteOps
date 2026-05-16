@@ -103,6 +103,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: i18n catalog parity
+        run: pnpm --filter @siteops/web i18n:check
+
       - name: Test
         run: pnpm test
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -37,6 +38,7 @@ const METRICS = [
 const OPERATORS = ['lt', 'lte', 'gt', 'gte', 'eq'];
 
 export function RuleEditor() {
+  const t = useTranslations('pages.alerts.rules');
   const qc = useQueryClient();
   const { data: rulesEnv, isLoading } = useQuery<ApiSuccess<Rule[]>, ApiError>({
     queryKey: ['alerts', 'rules'],
@@ -73,7 +75,7 @@ export function RuleEditor() {
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['alerts', 'rules'] });
-      toast.success('Rule saved');
+      toast.success(t('savedToast'));
       setDraft((d) => ({ ...d, name: '' }));
     },
     onError: (e) => toast.error(e.message),
@@ -89,12 +91,12 @@ export function RuleEditor() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold">Configured rules</h3>
+        <h3 className="text-sm font-semibold">{t('configuredTitle')}</h3>
         {isLoading ? (
           <Skeleton className="h-16 w-full" />
         ) : rules.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-            No rules yet.
+            {t('empty')}
           </p>
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border bg-card">
@@ -107,9 +109,9 @@ export function RuleEditor() {
                     {r.operator} {r.threshold}
                   </Badge>
                   {r.enabled ? (
-                    <Badge variant="success">enabled</Badge>
+                    <Badge variant="success">{t('enabledBadge')}</Badge>
                   ) : (
-                    <Badge variant="muted">off</Badge>
+                    <Badge variant="muted">{t('offBadge')}</Badge>
                   )}
                 </div>
                 <p className="font-mono text-xs text-muted-foreground">{r.id}</p>
@@ -128,7 +130,7 @@ export function RuleEditor() {
                     className="ml-auto"
                     onClick={() => deleteMut.mutate(r.id)}
                   >
-                    Delete
+                    {t('delete')}
                   </Button>
                 </div>
               </li>
@@ -138,9 +140,9 @@ export function RuleEditor() {
       </section>
 
       <section className="space-y-3 rounded-lg border border-border bg-card p-4 text-sm">
-        <h3 className="text-sm font-semibold">Add rule (global)</h3>
+        <h3 className="text-sm font-semibold">{t('addTitle')}</h3>
         <div className="space-y-2">
-          <Label htmlFor="r-name">Name</Label>
+          <Label htmlFor="r-name">{t('fieldName')}</Label>
           <Input
             id="r-name"
             value={draft.name}
@@ -149,7 +151,7 @@ export function RuleEditor() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-2">
-            <Label>Metric</Label>
+            <Label>{t('fieldMetric')}</Label>
             <select
               className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
               value={draft.metric}
@@ -163,7 +165,7 @@ export function RuleEditor() {
             </select>
           </div>
           <div className="space-y-2">
-            <Label>Operator</Label>
+            <Label>{t('fieldOperator')}</Label>
             <select
               className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
               value={draft.operator}
@@ -179,7 +181,7 @@ export function RuleEditor() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-2">
-            <Label htmlFor="r-threshold">Threshold</Label>
+            <Label htmlFor="r-threshold">{t('fieldThreshold')}</Label>
             <Input
               id="r-threshold"
               type="number"
@@ -189,7 +191,7 @@ export function RuleEditor() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="r-consec">Consecutive</Label>
+            <Label htmlFor="r-consec">{t('fieldConsecutive')}</Label>
             <Input
               id="r-consec"
               type="number"
@@ -202,12 +204,10 @@ export function RuleEditor() {
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Channels</Label>
+          <Label>{t('fieldChannels')}</Label>
           <div className="flex flex-wrap gap-1">
             {channels.length === 0 ? (
-              <span className="text-xs text-muted-foreground">
-                No channels yet — add one first.
-              </span>
+              <span className="text-xs text-muted-foreground">{t('noChannelsHint')}</span>
             ) : (
               channels.map((c) => {
                 const selected = draft.channelIds.includes(c.id);
@@ -237,7 +237,7 @@ export function RuleEditor() {
           </div>
         </div>
         <Button onClick={() => createMut.mutate()} disabled={!draft.name || createMut.isPending}>
-          Save rule
+          {t('save')}
         </Button>
       </section>
     </div>

@@ -3,11 +3,12 @@ import { notFound } from 'next/navigation';
 import { metrics as metricsSvc, sites as siteSvc } from '@siteops/services';
 import { isAppError, siteIdParamSchema } from '@siteops/shared';
 
-import { DateRangePicker, resolveRange } from '@/components/traffic/DateRangePicker';
+import { DateRangePicker } from '@/components/traffic/DateRangePicker';
 import { SearchConsolePanel } from '@/components/traffic/SearchConsolePanel';
 import { TrafficKpiRow } from '@/components/traffic/TrafficKpiRow';
 import { TrafficLineChart } from '@/components/traffic/TrafficLineChart';
 import { getDb } from '@/lib/db';
+import { resolveRange } from '@/lib/date-range';
 
 export const dynamic = 'force-dynamic';
 

@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl';
+
 export type UptimeFailure = {
   id: string | number;
   checkedAt: string | Date;
@@ -8,10 +10,11 @@ export type UptimeFailure = {
 };
 
 export function RecentFailuresList({ items }: { items: UptimeFailure[] }) {
+  const t = useTranslations('pages.uptime.failures');
   if (items.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-        No failures in the selected window.
+        {t('empty')}
       </p>
     );
   }
@@ -24,10 +27,10 @@ export function RecentFailuresList({ items }: { items: UptimeFailure[] }) {
               {new Date(f.checkedAt).toISOString()}
             </time>
             <span className="text-destructive font-medium">
-              {f.statusCode != null ? `HTTP ${f.statusCode}` : 'network error'}
+              {f.statusCode != null ? t('httpStatus', { code: f.statusCode }) : t('networkError')}
             </span>
           </div>
-          <p className="text-foreground">{f.error ?? 'No error message recorded.'}</p>
+          <p className="text-foreground">{f.error ?? t('noErrorMessage')}</p>
           <p className="font-mono text-xs text-muted-foreground">
             {f.url}
             {f.responseTimeMs != null ? <span> · {f.responseTimeMs} ms</span> : null}

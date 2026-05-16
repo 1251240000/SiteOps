@@ -10,6 +10,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -42,10 +43,13 @@ export function DataTable<TData, TValue>({
   data,
   columns,
   pageSize = 10,
-  emptyMessage = 'No results.',
+  emptyMessage,
   className,
   rowClassName,
 }: DataTableProps<TData, TValue>) {
+  const tCommon = useTranslations('common');
+  const tPagination = useTranslations('common.pagination');
+  const resolvedEmpty = emptyMessage ?? tCommon('noResults');
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const table = useReactTable({
@@ -84,7 +88,7 @@ export function DataTable<TData, TValue>({
                           type="button"
                           onClick={header.column.getToggleSortingHandler()}
                           className="inline-flex items-center gap-1 hover:text-foreground"
-                          aria-label={`Sort by ${String(header.column.id)}`}
+                          aria-label={tCommon('sortBy', { column: String(header.column.id) })}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           <SortIcon className="size-3" aria-hidden />
@@ -105,7 +109,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="px-4 py-10 text-center text-muted-foreground"
                 >
-                  {emptyMessage}
+                  {resolvedEmpty}
                 </td>
               </tr>
             ) : (
@@ -124,17 +128,25 @@ export function DataTable<TData, TValue>({
       </div>
 
       <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span>{total === 0 ? 'No rows' : `Showing ${startRow}–${endRow} of ${total}`}</span>
+        <span>
+          {total === 0
+            ? tPagination('noRows')
+            : tPagination('showing', { from: startRow, to: endRow, total })}
+        </span>
         <div className="flex items-center gap-2">
           <span>
-            Page <strong>{pageIndex + 1}</strong> of <strong>{Math.max(1, pageCount)}</strong>
+            {tPagination.rich('page', {
+              page: pageIndex + 1,
+              total: Math.max(1, pageCount),
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </span>
           <Button
             size="icon"
             variant="outline"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            aria-label="Previous page"
+            aria-label={tPagination('previous')}
           >
             <ChevronLeft className="size-4" />
           </Button>
@@ -143,7 +155,7 @@ export function DataTable<TData, TValue>({
             variant="outline"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            aria-label="Next page"
+            aria-label={tPagination('next')}
           >
             <ChevronRight className="size-4" />
           </Button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { Pencil, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ export function SiteCostsTable({
   rows: SiteCostRow[];
   onChange: () => void;
 }) {
+  const t = useTranslations('pages.roi.costs');
   const [editing, setEditing] = useState<SiteCostFormValues | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -81,7 +83,7 @@ export function SiteCostsTable({
   async function handleDelete(row: SiteCostRow) {
     if (
       typeof window !== 'undefined' &&
-      !window.confirm(`Delete cost row for ${fmtMonth(row.month)}?`)
+      !window.confirm(t('deleteConfirm', { month: fmtMonth(row.month) }))
     ) {
       return;
     }
@@ -92,7 +94,7 @@ export function SiteCostsTable({
       if (!res.ok) throw new Error(await res.text());
       onChange();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete row.');
+      setError(err instanceof Error ? err.message : t('deleteFailed'));
     } finally {
       setBusy(null);
     }
@@ -101,9 +103,9 @@ export function SiteCostsTable({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Monthly costs</h3>
+        <h3 className="text-lg font-semibold">{t('monthlyCosts')}</h3>
         <Button size="sm" onClick={startCreate}>
-          Add cost
+          {t('addCost')}
         </Button>
       </div>
 
@@ -117,21 +119,21 @@ export function SiteCostsTable({
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-4 py-2 text-left font-medium">Month</th>
-              <th className="px-4 py-2 text-right font-medium">Hosting</th>
-              <th className="px-4 py-2 text-right font-medium">Domain</th>
-              <th className="px-4 py-2 text-right font-medium">Content</th>
-              <th className="px-4 py-2 text-right font-medium">Ads</th>
-              <th className="px-4 py-2 text-right font-medium">Other</th>
-              <th className="px-4 py-2 text-right font-medium">Total</th>
-              <th className="px-4 py-2 text-right font-medium" aria-label="Row actions" />
+              <th className="px-4 py-2 text-left font-medium">{t('colMonth')}</th>
+              <th className="px-4 py-2 text-right font-medium">{t('colHosting')}</th>
+              <th className="px-4 py-2 text-right font-medium">{t('colDomain')}</th>
+              <th className="px-4 py-2 text-right font-medium">{t('colContent')}</th>
+              <th className="px-4 py-2 text-right font-medium">{t('colAds')}</th>
+              <th className="px-4 py-2 text-right font-medium">{t('colOther')}</th>
+              <th className="px-4 py-2 text-right font-medium">{t('colTotal')}</th>
+              <th className="px-4 py-2 text-right font-medium" aria-label={t('rowActionsAria')} />
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-card">
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
-                  No monthly costs yet. Add one to see ROI.
+                  {t('empty')}
                 </td>
               </tr>
             ) : (
@@ -170,7 +172,7 @@ export function SiteCostsTable({
                           variant="ghost"
                           onClick={() => startEdit(r)}
                           disabled={busy === r.id}
-                          aria-label={`Edit ${fmtMonth(r.month)}`}
+                          aria-label={t('editAria', { month: fmtMonth(r.month) })}
                         >
                           <Pencil className="size-4" />
                         </Button>
@@ -179,7 +181,7 @@ export function SiteCostsTable({
                           variant="ghost"
                           onClick={() => handleDelete(r)}
                           disabled={busy === r.id}
-                          aria-label={`Delete ${fmtMonth(r.month)}`}
+                          aria-label={t('deleteAria', { month: fmtMonth(r.month) })}
                         >
                           <Trash2 className="size-4 text-destructive" />
                         </Button>

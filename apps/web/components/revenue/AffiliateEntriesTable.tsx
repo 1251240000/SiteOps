@@ -1,6 +1,7 @@
 'use client';
 
 import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -57,6 +58,8 @@ export function AffiliateEntriesTable({
   /** Lifted callback so the parent page can refetch summary / chart. */
   onChange?: () => void;
 }) {
+  const t = useTranslations('pages.revenue.affiliate');
+  const tCommon = useTranslations('common');
   const [entries, setEntries] = useState<AffiliateEntry[]>(initialEntries);
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<AffiliateEntry | null>(null);
@@ -93,15 +96,18 @@ export function AffiliateEntriesTable({
     setDeleting(true);
     try {
       await api.delete(`/revenue/affiliate-entries/${deleteTarget.id}`);
-      toast.success('Entry removed');
+      toast.success(t('entryRemoved'));
       setDeleteTarget(null);
       onChange?.();
     } catch (err) {
       // Roll back the optimistic removal.
       setEntries(prev);
-      const message = err instanceof ApiError ? err.message : 'Delete failed';
+      const message = err instanceof ApiError ? err.message : t('deleteFailed');
       toast.error(message, {
-        description: err instanceof ApiError && err.requestId ? `Req ${err.requestId}` : undefined,
+        description:
+          err instanceof ApiError && err.requestId
+            ? tCommon('requestId', { id: err.requestId })
+            : undefined,
       });
     } finally {
       setDeleting(false);
@@ -109,13 +115,11 @@ export function AffiliateEntriesTable({
   }
 
   return (
-    <section aria-label="Affiliate entries" className="space-y-3">
+    <section aria-label={t('ariaLabel')} className="space-y-3">
       <header className="flex items-baseline justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Affiliate entries</h2>
-          <p className="text-xs text-muted-foreground">
-            Manual revenue rows. Each entry is spread evenly across its period in the chart.
-          </p>
+          <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
+          <p className="text-xs text-muted-foreground">{t('subtitle')}</p>
         </div>
         <Button
           size="sm"
@@ -125,13 +129,13 @@ export function AffiliateEntriesTable({
           }}
         >
           <Plus className="mr-1 size-4" aria-hidden />
-          Add entry
+          {t('addEntry')}
         </Button>
       </header>
 
       {sorted.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-          No entries yet — add a row above to start tracking affiliate revenue.
+          {t('empty')}
         </p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border">
@@ -139,22 +143,22 @@ export function AffiliateEntriesTable({
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
-                  Period
+                  {t('colPeriod')}
                 </th>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
-                  Program
+                  {t('colProgram')}
                 </th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Amount (USD)
+                  {t('colAmount')}
                 </th>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
-                  Original
+                  {t('colOriginal')}
                 </th>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
-                  Payout
+                  {t('colPayout')}
                 </th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t('colActionsSr')}</span>
                 </th>
               </tr>
             </thead>
@@ -194,7 +198,7 @@ export function AffiliateEntriesTable({
                           setEditTarget(row);
                           setShowForm(true);
                         }}
-                        aria-label={`Edit ${row.program}`}
+                        aria-label={t('editAria', { program: row.program })}
                       >
                         <Pencil className="size-4" aria-hidden />
                       </Button>
@@ -202,7 +206,7 @@ export function AffiliateEntriesTable({
                         size="sm"
                         variant="ghost"
                         onClick={() => setDeleteTarget(row)}
-                        aria-label={`Delete ${row.program}`}
+                        aria-label={t('deleteAria', { program: row.program })}
                       >
                         <Trash2 className="size-4 text-destructive" aria-hidden />
                       </Button>
@@ -232,19 +236,19 @@ export function AffiliateEntriesTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+            <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget ? (
-                <>
-                  This will permanently remove the {deleteTarget.program} entry covering{' '}
-                  {formatDateRange(deleteTarget.periodStart, deleteTarget.periodEnd)} (
-                  {usd.format(toNumber(deleteTarget.amountUsd))}).
-                </>
-              ) : null}
+              {deleteTarget
+                ? t('deleteDescription', {
+                    program: deleteTarget.program,
+                    period: formatDateRange(deleteTarget.periodStart, deleteTarget.periodEnd),
+                    amount: usd.format(toNumber(deleteTarget.amountUsd)),
+                  })
+                : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t('cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -252,7 +256,7 @@ export function AffiliateEntriesTable({
               }}
               disabled={deleting}
             >
-              {deleting ? 'Removing…' : 'Delete'}
+              {deleting ? t('removing') : t('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

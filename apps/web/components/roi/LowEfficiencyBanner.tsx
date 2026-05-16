@@ -1,14 +1,9 @@
 import { AlertTriangle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
 
 export type LowEfficiencyFlag = 'negative_roi' | 'low_rpm' | 'declining_revenue';
-
-const FLAG_LABELS: Record<LowEfficiencyFlag, string> = {
-  negative_roi: 'Negative ROI',
-  low_rpm: 'Low RPM',
-  declining_revenue: 'Declining revenue',
-};
 
 /**
  * Yellow banner shown above the ROI table when one or more sites trip a
@@ -25,6 +20,8 @@ export function LowEfficiencyBanner({
   flagCounts: Partial<Record<LowEfficiencyFlag, number>>;
   className?: string;
 }) {
+  const t = useTranslations('pages.roi.banner');
+  const tFlag = useTranslations('pages.roi.banner.flags');
   if (count === 0) return null;
 
   const sorted = (Object.entries(flagCounts) as [LowEfficiencyFlag, number][])
@@ -42,11 +39,11 @@ export function LowEfficiencyBanner({
     >
       <AlertTriangle className="size-5 text-warning" aria-hidden />
       <div className="flex-1">
-        <p className="font-medium text-foreground">
-          {count} site{count === 1 ? '' : 's'} need attention
-        </p>
+        <p className="font-medium text-foreground">{t('needsAttention', { count })}</p>
         <p className="text-xs text-muted-foreground">
-          {sorted.map(([flag, c]) => `${FLAG_LABELS[flag]} (${c})`).join(' · ')}
+          {sorted
+            .map(([flag, c]) => t('flagSummary', { label: tFlag(flag), count: c }))
+            .join(' · ')}
         </p>
       </div>
     </section>

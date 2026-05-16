@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Cloud, Github, BarChart3, Activity, Search, DollarSign } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { api, type ApiError, type ApiSuccess } from '@/lib/api-client';
@@ -18,6 +19,7 @@ type StatusEnvelope = {
 };
 
 export function IntegrationsGrid() {
+  const t = useTranslations('pages.integrations');
   const { data, isLoading, error } = useQuery<ApiSuccess<StatusEnvelope>, ApiError>({
     queryKey: ['integrations', 'status'],
     queryFn: () => api.get<StatusEnvelope>('/integrations/status'),
@@ -36,7 +38,7 @@ export function IntegrationsGrid() {
   if (error || !data) {
     return (
       <p className="text-sm text-destructive">
-        Failed to load integration status: {error?.message ?? 'unknown error'}
+        {t('loadFailed', { error: error?.message ?? t('unknownError') })}
       </p>
     );
   }
@@ -46,8 +48,8 @@ export function IntegrationsGrid() {
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <IntegrationCard
         icon={Cloud}
-        name="Cloudflare Pages"
-        description="Pull build/deploy history from CF Pages projects. Set CF_API_TOKEN in env."
+        name={t('providers.cloudflare.name')}
+        description={t('providers.cloudflare.description')}
         status={s.cloudflare}
         envReady={s.cloudflare.hasToken}
         endpoints={{
@@ -57,8 +59,8 @@ export function IntegrationsGrid() {
       />
       <IntegrationCard
         icon={Github}
-        name="GitHub Actions"
-        description="Sync workflow runs as deployment events. Set GH_TOKEN in env."
+        name={t('providers.github.name')}
+        description={t('providers.github.description')}
         status={s.github}
         envReady={s.github.hasToken}
         endpoints={{
@@ -68,8 +70,8 @@ export function IntegrationsGrid() {
       />
       <IntegrationCard
         icon={BarChart3}
-        name="Google Analytics 4"
-        description="Pull daily PV/UV/sessions via the Data API. Service account JSON in GA4_SERVICE_ACCOUNT_JSON."
+        name={t('providers.ga4.name')}
+        description={t('providers.ga4.description')}
         status={s.ga4}
         envReady={s.ga4.hasToken}
         endpoints={{
@@ -78,8 +80,8 @@ export function IntegrationsGrid() {
       />
       <IntegrationCard
         icon={Activity}
-        name="Plausible"
-        description="Optional analytics provider. Set PLAUSIBLE_API_KEY for any site with analyticsProvider=plausible."
+        name={t('providers.plausible.name')}
+        description={t('providers.plausible.description')}
         status={s.plausible}
         envReady={s.plausible.hasToken}
         endpoints={{
@@ -88,8 +90,8 @@ export function IntegrationsGrid() {
       />
       <IntegrationCard
         icon={Search}
-        name="Search Console"
-        description="Pull impressions/clicks/CTR. Requires GSC_OAUTH_* env then a one-time consent."
+        name={t('providers.gsc.name')}
+        description={t('providers.gsc.description')}
         status={s.gsc}
         envReady={s.gsc.hasOAuthClient}
         endpoints={{
@@ -99,8 +101,8 @@ export function IntegrationsGrid() {
       />
       <IntegrationCard
         icon={DollarSign}
-        name="AdSense"
-        description="Daily earnings & RPM via the AdSense Management API. Needs OAuth + ADSENSE_ACCOUNT_NAME."
+        name={t('providers.adsense.name')}
+        description={t('providers.adsense.description')}
         status={s.adsense}
         envReady={s.adsense.hasOAuthClient && s.adsense.hasAccountName}
         endpoints={{

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { parseAsString, useQueryState } from 'nuqs';
 
 import { Label } from '@/components/ui/label';
@@ -15,6 +16,9 @@ import { DEPLOYMENT_PROVIDERS, DEPLOYMENT_STATUS } from '@siteops/shared/constan
 const ANY = '__any__';
 
 export function DeploymentFilters() {
+  const t = useTranslations('pages.deployments.filters');
+  const tEnumStatus = useTranslations('enums.deploymentStatus');
+  const tEnumProvider = useTranslations('enums.deploymentProvider');
   const [status, setStatus] = useQueryState('status', parseAsString.withDefault(''));
   const [provider, setProvider] = useQueryState('provider', parseAsString.withDefault(''));
   const [, setPage] = useQueryState('page', parseAsString.withDefault(''));
@@ -25,11 +29,11 @@ export function DeploymentFilters() {
 
   return (
     <section
-      aria-label="Deployment filters"
+      aria-label={t('ariaLabel')}
       className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 md:flex-row md:items-end md:gap-4"
     >
       <div className="w-full space-y-1.5 md:w-44">
-        <Label htmlFor="deploy-status">Status</Label>
+        <Label htmlFor="deploy-status">{t('statusLabel')}</Label>
         <Select
           value={status || ANY}
           onValueChange={(v) => {
@@ -38,13 +42,13 @@ export function DeploymentFilters() {
           }}
         >
           <SelectTrigger id="deploy-status">
-            <SelectValue placeholder="Any" />
+            <SelectValue placeholder={t('anyPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ANY}>Any status</SelectItem>
+            <SelectItem value={ANY}>{t('anyStatus')}</SelectItem>
             {DEPLOYMENT_STATUS.map((s) => (
               <SelectItem key={s} value={s}>
-                {s}
+                {tEnumStatus(s)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -52,7 +56,7 @@ export function DeploymentFilters() {
       </div>
 
       <div className="w-full space-y-1.5 md:w-48">
-        <Label htmlFor="deploy-provider">Provider</Label>
+        <Label htmlFor="deploy-provider">{t('providerLabel')}</Label>
         <Select
           value={provider || ANY}
           onValueChange={(v) => {
@@ -61,13 +65,13 @@ export function DeploymentFilters() {
           }}
         >
           <SelectTrigger id="deploy-provider">
-            <SelectValue placeholder="Any" />
+            <SelectValue placeholder={t('anyPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ANY}>Any provider</SelectItem>
+            <SelectItem value={ANY}>{t('anyProvider')}</SelectItem>
             {DEPLOYMENT_PROVIDERS.map((p) => (
               <SelectItem key={p} value={p}>
-                {p}
+                {tEnumProvider(p)}
               </SelectItem>
             ))}
           </SelectContent>

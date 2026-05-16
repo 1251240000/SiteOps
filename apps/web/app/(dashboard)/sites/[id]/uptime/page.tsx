@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
 import { uptime as uptimeSvc } from '@siteops/services';
@@ -37,6 +38,8 @@ export default async function SiteUptimePage({ params, searchParams }: PageProps
   const from = new Date(to.getTime() - windowHours * 60 * 60 * 1000);
   const granularity = windowHours > 7 * 24 ? '1d' : windowHours > 24 ? '1h' : '5m';
 
+  const t = await getTranslations('pages.uptime.page');
+
   try {
     const [summary, series, failures] = await Promise.all([
       uptimeSvc.uptimeService.summary(deps, parsed.data.id, windowHours * 60 * 60 * 1000),
@@ -46,17 +49,17 @@ export default async function SiteUptimePage({ params, searchParams }: PageProps
 
     const windowLabel =
       windowHours === 24
-        ? 'last 24h'
+        ? t('window24h')
         : windowHours === 24 * 7
-          ? 'last 7d'
+          ? t('window7d')
           : windowHours === 24 * 30
-            ? 'last 30d'
-            : `last ${windowHours}h`;
+            ? t('window30d')
+            : t('windowCustom', { hours: windowHours });
 
     return (
       <div className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <nav aria-label="Time window" className="flex gap-1 text-xs">
+          <nav aria-label={t('timeWindowAria')} className="flex gap-1 text-xs">
             {[
               { hours: 24, label: '24h' },
               { hours: 24 * 7, label: '7d' },
@@ -88,8 +91,8 @@ export default async function SiteUptimePage({ params, searchParams }: PageProps
           }))}
         />
 
-        <section aria-label="Recent failures" className="space-y-2">
-          <header className="text-sm font-semibold">Recent failures</header>
+        <section aria-label={t('recentFailuresAria')} className="space-y-2">
+          <header className="text-sm font-semibold">{t('recentFailuresTitle')}</header>
           <RecentFailuresList
             items={failures.map((f) => ({
               id: f.id.toString(),

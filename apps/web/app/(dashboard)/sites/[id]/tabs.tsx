@@ -1,46 +1,61 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 
-const TABS = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'traffic', label: 'Traffic' },
-  { key: 'revenue', label: 'Revenue' },
-  { key: 'uptime', label: 'Uptime' },
-  { key: 'audits', label: 'Audits' },
-  { key: 'deployments', label: 'Deployments' },
-  { key: 'settings', label: 'Settings' },
-] as const;
+type TabKey = 'overview' | 'traffic' | 'revenue' | 'uptime' | 'audits' | 'deployments' | 'settings';
 
-function tabHref(siteId: string, key: (typeof TABS)[number]['key']): string {
+/** i18n key under `pages.sites.detail.tab<Pascal>`. */
+const TAB_KEYS: readonly TabKey[] = [
+  'overview',
+  'traffic',
+  'revenue',
+  'uptime',
+  'audits',
+  'deployments',
+  'settings',
+];
+
+const TAB_LABEL_KEY: Record<TabKey, string> = {
+  overview: 'tabOverview',
+  traffic: 'tabTraffic',
+  revenue: 'tabRevenue',
+  uptime: 'tabUptime',
+  audits: 'tabAudits',
+  deployments: 'tabDeployments',
+  settings: 'tabSettings',
+};
+
+function tabHref(siteId: string, key: TabKey): string {
   if (key === 'overview') return `/sites/${siteId}`;
   return `/sites/${siteId}/${key}`;
 }
 
-function activeKey(pathname: string, siteId: string): string {
+function activeKey(pathname: string, siteId: string): TabKey {
   if (pathname === `/sites/${siteId}` || pathname === `/sites/${siteId}/`) return 'overview';
-  for (const t of TABS) {
-    if (pathname.startsWith(`/sites/${siteId}/${t.key}`)) return t.key;
+  for (const k of TAB_KEYS) {
+    if (pathname.startsWith(`/sites/${siteId}/${k}`)) return k;
   }
   return 'overview';
 }
 
 export function SiteTabs({ siteId }: { siteId: string }) {
   const pathname = usePathname();
+  const t = useTranslations('pages.sites.detail');
   const current = activeKey(pathname, siteId);
 
   return (
-    <nav aria-label="Site sections" className="border-b border-border">
+    <nav aria-label={t('tabsAriaLabel')} className="border-b border-border">
       <ul role="tablist" className="-mb-px flex flex-wrap gap-1">
-        {TABS.map((t) => {
-          const active = t.key === current;
+        {TAB_KEYS.map((key) => {
+          const active = key === current;
           return (
-            <li key={t.key}>
+            <li key={key}>
               <Link
-                href={tabHref(siteId, t.key)}
+                href={tabHref(siteId, key)}
                 role="tab"
                 aria-selected={active}
                 className={cn(
@@ -50,7 +65,7 @@ export function SiteTabs({ siteId }: { siteId: string }) {
                     : 'border-transparent text-muted-foreground hover:text-foreground',
                 )}
               >
-                {t.label}
+                {t(TAB_LABEL_KEY[key])}
               </Link>
             </li>
           );

@@ -42,8 +42,14 @@ export const authConfig = {
   providers: [],
   callbacks: {
     /**
-     * Decides whether a request is allowed through. Returning `false` makes
-     * Auth.js redirect to the `pages.signIn` URL with `?callbackUrl=...`.
+     * Decides whether a request is allowed through.
+     *
+     * IMPORTANT: when `middleware.ts` wraps Auth with `auth((req) => …)`,
+     * next-auth's `handleAuth` runs the user middleware whenever this
+     * callback returns a boolean — the built-in unauthorized redirect is
+     * only triggered when no wrapper is provided. To stay correct in both
+     * shapes we must return an explicit `Response.redirect(...)` for the
+     * unauthorized case rather than `false`.
      */
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
@@ -59,7 +65,14 @@ export const authConfig = {
         return true;
       }
       if (!isProtectedPath(path)) return true;
-      return isLoggedIn;
+      if (isLoggedIn) return true;
+
+      // Unauthenticated request to a protected path → redirect to /login
+      // with a relative `callbackUrl` so `safeCallbackUrl` accepts it.
+      const signInUrl = new URL('/login', nextUrl);
+      const dest = `${nextUrl.pathname}${nextUrl.search}`;
+      if (dest && dest !== '/') signInUrl.searchParams.set('callbackUrl', dest);
+      return Response.redirect(signInUrl);
     },
     /**
      * Stamp the user id onto the JWT at sign-in. Auth.js's default JWT

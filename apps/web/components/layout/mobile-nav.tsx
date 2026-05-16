@@ -1,6 +1,7 @@
 'use client';
 
 import { Menu, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -23,6 +24,8 @@ function isActive(pathname: string, href: string): boolean {
  */
 export function MobileNav() {
   const pathname = usePathname();
+  const tNav = useTranslations('nav');
+  const tSide = useTranslations('sidebar');
   const [open, setOpen] = useState(false);
 
   // Close on route change so navigating to a section dismisses the drawer.
@@ -52,7 +55,7 @@ export function MobileNav() {
         size="icon"
         className="lg:hidden"
         onClick={() => setOpen(true)}
-        aria-label="Open navigation"
+        aria-label={tSide('openMobileNav')}
         aria-expanded={open}
         aria-controls="mobile-nav-panel"
       >
@@ -64,7 +67,7 @@ export function MobileNav() {
           {/* Backdrop */}
           <button
             type="button"
-            aria-label="Close navigation"
+            aria-label={tSide('closeMobileNav')}
             className="absolute inset-0 bg-foreground/40"
             onClick={() => setOpen(false)}
           />
@@ -87,12 +90,12 @@ export function MobileNav() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setOpen(false)}
-                aria-label="Close navigation"
+                aria-label={tSide('closeMobileNav')}
               >
                 <X className="size-5" />
               </Button>
             </div>
-            <nav className="flex flex-1 flex-col gap-1 p-2" aria-label="Sections">
+            <nav className="flex flex-1 flex-col gap-1 p-2" aria-label={tNav('sectionsAriaLabel')}>
               {NAV_ITEMS.map((item) => {
                 const active = isActive(pathname, item.href);
                 const Icon = item.icon;
@@ -109,7 +112,7 @@ export function MobileNav() {
                     )}
                   >
                     <Icon className="size-4 shrink-0" aria-hidden />
-                    {item.label}
+                    {tNav(item.key)}
                   </Link>
                 );
               })}

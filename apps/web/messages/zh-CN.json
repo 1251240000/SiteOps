@@ -1,0 +1,841 @@
+{
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "ok": "确定",
+    "edit": "编辑",
+    "delete": "删除",
+    "loading": "加载中…",
+    "retry": "重试",
+    "errorGeneric": "出错了，请稍后重试。",
+    "noneOption": "无",
+    "saveFailed": "保存失败",
+    "saving": "保存中…",
+    "requestId": "请求 {id}",
+    "pagination": {
+      "previous": "上一页",
+      "next": "下一页",
+      "page": "第 <strong>{page}</strong> / <strong>{total}</strong> 页",
+      "showing": "显示 {from}–{to} 条 · 共 {total} 条",
+      "noRows": "暂无数据"
+    },
+    "sortBy": "按 {column} 排序",
+    "noResults": "暂无结果。",
+    "expiry": {
+      "daysAgo": "{days} 天前",
+      "today": "今天",
+      "inDays": "{days} 天后"
+    },
+    "formErrors": {
+      "required": "必填",
+      "invalidUrl": "请填写合法 URL",
+      "invalidUuid": "请填写合法 UUID",
+      "invalidString": "格式不正确",
+      "invalidEnum": "请选择有效选项",
+      "tooShort": "至少 {min} 个字符",
+      "tooLong": "至多 {max} 个字符",
+      "mustUseHttps": "请使用 https",
+      "mustUseHttpHttps": "请使用 http 或 https",
+      "hostNotPublic": "域名不可公网访问",
+      "hostPrivateIp": "禁止使用内网 IP",
+      "tagsAlphanumeric": "标签仅允许字母数字与短横线",
+      "mustBeKebabCase": "请使用小写 kebab-case",
+      "mustBeIso8601": "需 ISO-8601 时区时间",
+      "mustBeIsoDate": "请填写 YYYY-MM-DD",
+      "mustBeIso4217": "需 ISO-4217 三位货币码",
+      "invalidDomain": "域名格式不正确"
+    }
+  },
+  "enums": {
+    "siteStatus": {
+      "active": "在线",
+      "paused": "暂停",
+      "archived": "已归档"
+    },
+    "siteType": {
+      "directory": "目录",
+      "tool": "工具",
+      "content": "内容",
+      "forum": "论坛",
+      "landing": "落地页"
+    },
+    "deploymentStatus": {
+      "queued": "排队中",
+      "building": "构建中",
+      "success": "成功",
+      "failed": "失败",
+      "cancelled": "已取消"
+    },
+    "deploymentProvider": {
+      "cloudflare_pages": "Cloudflare Pages",
+      "github_pages": "GitHub Pages",
+      "vercel": "Vercel",
+      "netlify": "Netlify",
+      "manual": "手动"
+    },
+    "errorLevel": {
+      "error": "错误",
+      "warning": "警告"
+    },
+    "severity": {
+      "info": "提示",
+      "warning": "警告",
+      "error": "错误",
+      "critical": "严重"
+    },
+    "auditStatus": {
+      "success": "成功",
+      "running": "运行中",
+      "failed": "失败",
+      "unknown": "未知"
+    }
+  },
+  "auth": {
+    "signInTitle": "登录 siteops",
+    "signInDescription": "单 admin 账号登录。种子用户见 <code>.env.example</code>。",
+    "email": "邮箱",
+    "password": "密码",
+    "submit": "登录",
+    "submitting": "登录中…",
+    "errorInvalid": "邮箱或密码错误。",
+    "errorGeneric": "登录失败，请稍后重试。",
+    "formAriaLabel": "登录表单"
+  },
+  "nav": {
+    "overview": "概览",
+    "sites": "站点",
+    "traffic": "流量",
+    "revenue": "收入",
+    "roi": "ROI",
+    "domains": "域名",
+    "deployments": "部署",
+    "errors": "错误",
+    "alerts": "告警",
+    "integrations": "集成",
+    "settings": "设置",
+    "sectionsAriaLabel": "导航",
+    "breadcrumbAriaLabel": "面包屑"
+  },
+  "topbar": {
+    "themeAriaLabel": "主题（当前：{active}）",
+    "themeAriaLabelLoading": "主题",
+    "themeLight": "浅色",
+    "themeDark": "深色",
+    "themeSystem": "跟随系统",
+    "accountAriaLabel": "{name} 的账户菜单",
+    "accountDefaultName": "管理员",
+    "signOut": "退出登录",
+    "localeAriaLabel": "切换语言（当前：{active}）",
+    "localeChinese": "中文",
+    "localeEnglish": "English"
+  },
+  "sidebar": {
+    "primaryAriaLabel": "主导航",
+    "expand": "展开侧栏",
+    "collapse": "折叠侧栏",
+    "openMobileNav": "打开导航",
+    "closeMobileNav": "关闭导航",
+    "footer": "v{version} · {year}"
+  },
+  "pages": {
+    "overview": {
+      "title": "概览",
+      "description": "全站 KPI 快照。真实数据将随 T08+ 接入。",
+      "kpiAriaLabel": "关键指标",
+      "sitesTracked": "已纳管站点",
+      "sitesTrackedHint": "0 在线 · 0 已归档",
+      "domainsLabel": "域名",
+      "domainsHint": "30 天内到期：0",
+      "deploymentsLabel": "部署（7 天）",
+      "deploymentsHint": "等待 T10",
+      "openAlerts": "未关闭告警",
+      "openAlertsHint": "等待 T16",
+      "recentActivity": "最近活动",
+      "recentActivityHint": "预览 · 模拟数据",
+      "recentActivityAriaLabel": "最近活动",
+      "emptyTitle": "暂无更多内容",
+      "emptyDescription": "uptime sparkline、错误率、流量等其他卡片将在 M2 接入。",
+      "activity": {
+        "colSite": "站点",
+        "colEvent": "事件",
+        "colStatus": "状态",
+        "colDuration": "耗时",
+        "colWhen": "时间",
+        "eventDeploy": "部署",
+        "eventAlert": "告警",
+        "eventAudit": "审计",
+        "durationFormat": "{ms} ms"
+      }
+    },
+    "sites": {
+      "title": "站点",
+      "description": "本控制台管理的所有站点登记。",
+      "newAction": "新建站点",
+      "new": {
+        "title": "新建站点",
+        "description": "登记一个站点，dashboard 即可跟踪它的域名、部署与审计。"
+      },
+      "list": {
+        "colName": "名称",
+        "colPrimary": "主域名",
+        "colType": "类型",
+        "colStatus": "状态",
+        "colHealth": "健康分",
+        "colCreated": "创建时间",
+        "sortByAriaLabel": "按 {column} 排序",
+        "empty": "无符合筛选条件的站点。",
+        "loadFailed": "加载站点列表失败"
+      },
+      "filters": {
+        "ariaLabel": "站点筛选",
+        "search": "搜索",
+        "searchPlaceholder": "名称、slug 或 URL…",
+        "typeLabel": "类型",
+        "anyType": "全部类型",
+        "anyPlaceholder": "全部",
+        "statusLabel": "状态",
+        "anyStatus": "全部状态",
+        "showArchived": "显示已归档"
+      },
+      "form": {
+        "sectionBasics": "基础信息",
+        "sectionTechRepo": "技术栈与仓库",
+        "sectionIntegrations": "集成",
+        "sectionNotes": "备注",
+        "fieldName": "名称",
+        "fieldPrimaryUrl": "主域名 URL",
+        "fieldPrimaryUrlPlaceholder": "https://example.com",
+        "fieldSiteType": "站点类型",
+        "fieldStatus": "状态",
+        "fieldTargetCountry": "目标国家（ISO-2）",
+        "fieldTargetCountryPlaceholder": "US",
+        "fieldTargetLanguage": "目标语言",
+        "fieldTargetLanguagePlaceholder": "en",
+        "fieldTags": "标签",
+        "fieldTagsPlaceholder": "用逗号分隔",
+        "fieldFramework": "框架",
+        "fieldHosting": "托管",
+        "fieldRepoUrl": "仓库 URL",
+        "fieldRepoUrlPlaceholder": "https://github.com/org/repo",
+        "fieldRepoProvider": "仓库提供商",
+        "fieldCfAccountId": "Cloudflare 账号 ID",
+        "fieldCfPagesProject": "Cloudflare Pages 项目",
+        "fieldAnalyticsProvider": "分析服务",
+        "fieldAnalyticsId": "分析 ID",
+        "fieldAnalyticsIdPlaceholder": "G-XXXXXXXX",
+        "fieldSearchConsoleProperty": "Search Console property",
+        "fieldSearchConsolePropertyPlaceholder": "sc-domain:example.com",
+        "fieldAdsensePublisherId": "AdSense 发布商 ID",
+        "fieldAdsensePublisherIdPlaceholder": "pub-XXXXXXX",
+        "fieldAdsenseStatus": "AdSense 状态",
+        "submitCreate": "创建站点",
+        "submitUpdate": "保存修改",
+        "createdToast": "已创建站点「{name}」",
+        "updatedToast": "已更新站点「{name}」"
+      },
+      "detail": {
+        "emptyTitle": "更多组件将在 M2 接入",
+        "emptyDescription": "uptime sparkline、最近审计、部署时间线、错误率会随对应任务上线。",
+        "tabsAriaLabel": "站点子页面",
+        "tabOverview": "概览",
+        "tabTraffic": "流量",
+        "tabRevenue": "收入",
+        "tabUptime": "在线状态",
+        "tabAudits": "审计",
+        "tabDeployments": "部署",
+        "tabSettings": "设置",
+        "actionsAriaLabel": "站点操作",
+        "copyId": "复制 ID",
+        "copyJson": "复制 JSON",
+        "copyIdToast": "已复制站点 ID",
+        "copyJsonToast": "已复制站点 JSON",
+        "archive": "归档",
+        "archiving": "归档中…",
+        "archiveDialogTitle": "归档「{name}」？",
+        "archiveDialogDescription": "归档会从默认列表中隐藏该站点，但保留历史数据。在列表页打开「显示已归档」即可重新看到。",
+        "archiveSuccessToast": "已归档「{name}」",
+        "archiveFailedToast": "归档失败"
+      },
+      "summary": {
+        "slug": "Slug",
+        "health": "健康分",
+        "country": "国家",
+        "language": "语言",
+        "framework": "框架",
+        "hosting": "托管",
+        "repo": "仓库",
+        "analytics": "Analytics"
+      }
+    },
+    "traffic": {
+      "title": "流量",
+      "description": "全局 {from} → {to} · {granularity, select, week {周} other {日}} 颗粒",
+      "rangePicker": {
+        "ariaLabel": "时间范围",
+        "rangeLabel": "范围",
+        "presetsAriaLabel": "快捷选项",
+        "presetDays": "{days} 天",
+        "from": "起始",
+        "to": "结束"
+      },
+      "kpis": {
+        "ariaLabel": "流量指标",
+        "pageViews": "页面浏览量",
+        "uniqueVisitors": "独立访客",
+        "sessions": "会话",
+        "avgSession": "平均时长",
+        "prev": "上期 {value}",
+        "noBounceData": "无跳出数据",
+        "bounce": "跳出率 {rate}"
+      },
+      "chart": {
+        "ariaLabel": "流量趋势",
+        "title": "流量趋势",
+        "metricAriaLabel": "指标",
+        "metric": {
+          "pv": "页面浏览量",
+          "uv": "独立访客",
+          "sessions": "会话"
+        },
+        "empty": "所选窗口暂无流量数据。",
+        "weekBucket": "wk {date}",
+        "dayBucket": "{date}"
+      },
+      "topSites": {
+        "ariaLabel": "Top 站点",
+        "title": "Top 站点",
+        "sortedBy": "按 {metric} 排序",
+        "colSite": "站点",
+        "colPv": "页面浏览量",
+        "colUv": "独立访客",
+        "colSessions": "会话",
+        "empty": "该窗口内未记录任何站点流量。"
+      },
+      "search": {
+        "ariaLabel": "Search Console",
+        "title": "Search Console",
+        "queriesCount": "{count} 条查询",
+        "impressions": "曝光",
+        "clicks": "点击",
+        "ctr": "CTR",
+        "avgPosition": "平均排名",
+        "avgPositionHint": "数值越小越好",
+        "empty": "该窗口内暂无搜索查询数据。",
+        "colQuery": "查询",
+        "colClicks": "点击",
+        "colImpressions": "曝光",
+        "colCtr": "CTR",
+        "colAvgPos": "平均排名"
+      }
+    },
+    "revenue": {
+      "title": "收入",
+      "description": "全局 {from} → {to} · {granularity, select, week {周} other {日}} 颗粒",
+      "siteTabs": {
+        "revenue": "收入",
+        "costs": "成本"
+      },
+      "kpis": {
+        "ariaLabel": "收入指标",
+        "totalRevenue": "总收入",
+        "adSense": "AdSense",
+        "affiliate": "联盟",
+        "arpv": "ARPV",
+        "prev": "上期 {value}",
+        "noRevenueWindow": "本窗口无收入",
+        "shareOfTotal": "占总收入 {percent}",
+        "topProgram": "Top：{name}",
+        "noAffiliateEntries": "暂无联盟条目",
+        "perPageView": "每次访问",
+        "pvNotLoaded": "PV 未加载",
+        "noPvInWindow": "窗口内无 PV 数据"
+      },
+      "chart": {
+        "ariaLabel": "收入趋势",
+        "title": "收入趋势",
+        "modeAriaLabel": "图表模式",
+        "modeStacked": "堆叠柱图",
+        "modeLines": "折线图",
+        "empty": "所选窗口暂无收入数据。",
+        "seriesAdSense": "AdSense",
+        "seriesAffiliate": "联盟",
+        "weekBucket": "wk {date}",
+        "dayBucket": "{date}"
+      },
+      "topSites": {
+        "ariaLabel": "Top 收入站点",
+        "title": "Top 收入站点",
+        "sitesCount": "{count} 站",
+        "colSite": "站点",
+        "colAdSense": "AdSense",
+        "colAffiliate": "联盟",
+        "colTotal": "合计",
+        "empty": "该窗口内未记录任何站点收入。"
+      },
+      "affiliate": {
+        "ariaLabel": "联盟收入条目",
+        "title": "联盟收入条目",
+        "subtitle": "人工录入的收入行。每条会在图表中按所属周期均匀分摊。",
+        "addEntry": "新增条目",
+        "empty": "暂无条目 —— 在上方添加一行来开始记录联盟收入。",
+        "colPeriod": "周期",
+        "colProgram": "项目",
+        "colAmount": "金额（USD）",
+        "colOriginal": "原币种",
+        "colPayout": "打款日期",
+        "colActionsSr": "操作",
+        "editAria": "编辑 {program}",
+        "deleteAria": "删除 {program}",
+        "deleteTitle": "确认删除该条目？",
+        "deleteDescription": "将永久删除「{program}」覆盖 {period} 的条目（{amount}）。",
+        "cancel": "取消",
+        "delete": "删除",
+        "removing": "删除中…",
+        "entryRemoved": "条目已删除",
+        "deleteFailed": "删除失败",
+        "form": {
+          "titleEdit": "编辑联盟收入条目",
+          "titleAdd": "新增联盟收入条目",
+          "subtitle": "建议每个项目（program）在每个周期只创建一条记录，以便趋势可读。金额以 USD 存储，原币种字段仅用于核对。",
+          "fieldProgram": "项目",
+          "fieldProgramPlaceholder": "Amazon Associates",
+          "fieldPeriodStart": "周期起始",
+          "fieldPeriodEnd": "周期结束",
+          "fieldAmountUsd": "金额（USD）",
+          "fieldPayoutDate": "打款日期",
+          "fieldOriginalAmount": "原币种金额",
+          "fieldCurrency": "币种",
+          "fieldCurrencyPlaceholder": "USD",
+          "fieldNotes": "备注",
+          "optional": "选填",
+          "cancel": "取消",
+          "addEntry": "新增条目",
+          "saveChanges": "保存修改",
+          "saving": "保存中…",
+          "entryAdded": "条目已新增",
+          "entryUpdated": "条目已更新",
+          "saveFailed": "保存失败"
+        }
+      }
+    },
+    "roi": {
+      "title": "ROI",
+      "description": "全局 {from} → {to} · {count, plural, =0 {0 站} other {# 站}} · 按 {sortBy} 排序",
+      "sortKeys": {
+        "roi": "ROI",
+        "revenue": "收入",
+        "cost": "成本",
+        "profit": "利润",
+        "rpm": "RPM",
+        "pv": "PV"
+      },
+      "kpis": {
+        "ariaLabel": "ROI 指标",
+        "revenue": "收入",
+        "cost": "成本",
+        "costNoneHint": "未记录成本",
+        "profit": "利润",
+        "profitUp": "↑ 盈利",
+        "profitDown": "↓ 亏损",
+        "roi": "ROI",
+        "naValue": "——",
+        "roiInProfit": "↑ 盈利",
+        "roiInLoss": "↓ 亏损",
+        "noPvData": "无 PV 数据",
+        "rpmHint": "RPM {value}"
+      },
+      "banner": {
+        "needsAttention": "{count} 个站点需关注",
+        "flagSummary": "{label}（{count}）",
+        "flags": {
+          "negative_roi": "ROI 为负",
+          "low_rpm": "RPM 偏低",
+          "declining_revenue": "收入下滑"
+        }
+      },
+      "table": {
+        "colSite": "站点",
+        "colPv": "PV",
+        "colRevenue": "收入",
+        "colCost": "成本",
+        "colProfit": "利润",
+        "colRoi": "ROI",
+        "colRpm": "RPM",
+        "colFlags": "标记",
+        "naValue": "——",
+        "empty": "还没有站点 —— 创建一个并添加成本 / 收入数据才能看到 ROI。",
+        "flagsShort": {
+          "negative_roi": "ROI<0",
+          "low_rpm": "低 RPM",
+          "declining_revenue": "下滑"
+        }
+      },
+      "costs": {
+        "monthlyCosts": "月度成本",
+        "addCost": "新增成本",
+        "deleteConfirm": "删除 {month} 的成本记录？",
+        "deleteFailed": "删除失败。",
+        "refreshFailed": "刷新成本列表失败",
+        "rowActionsAria": "行操作",
+        "colMonth": "月份",
+        "colHosting": "主机",
+        "colDomain": "域名",
+        "colContent": "内容",
+        "colAds": "广告",
+        "colOther": "其他",
+        "colTotal": "合计",
+        "empty": "暂无月度成本。添加一条才能看到 ROI。",
+        "editAria": "编辑 {month}",
+        "deleteAria": "删除 {month}",
+        "form": {
+          "titleEdit": "编辑月度成本",
+          "titleAdd": "新增月度成本",
+          "subtitle": "一个月份一行。该行金额会按覆盖的天数在仪表盘里分摊。",
+          "fieldMonth": "月份",
+          "monthHint": "不允许将来月份；当月可以填估计值。",
+          "fieldHosting": "主机 / CDN（USD）",
+          "fieldDomain": "域名（USD）",
+          "fieldContent": "内容（USD）",
+          "fieldAds": "广告投放（USD）",
+          "fieldOther": "其他（USD）",
+          "fieldNotes": "备注",
+          "optional": "选填",
+          "total": "本月合计：",
+          "cancel": "取消",
+          "addCost": "新增成本",
+          "saveChanges": "保存修改",
+          "saving": "保存中…",
+          "errorPickMonth": "请选择有效月份",
+          "errorFutureMonth": "不能为未来月份记录成本",
+          "errorAllZero": "请至少填写一项非零成本",
+          "confirmHighDollar": "列「{cols}」超过 {threshold}。\n这不常见 —— 确认后保存。",
+          "costAdded": "成本已新增",
+          "costUpdated": "成本已更新",
+          "saveFailed": "保存失败"
+        }
+      },
+      "waterfall": {
+        "buckets": {
+          "adRev": "广告收入",
+          "affiliate": "联盟",
+          "hosting": "主机",
+          "domain": "域名",
+          "content": "内容",
+          "adsSpend": "广告投放",
+          "other": "其他",
+          "profit": "利润"
+        }
+      }
+    },
+    "domains": {
+      "title": "域名",
+      "description": "全站 DNS / 注册商 / SSL 到期信息。30 天内到期会高亮；已过期标红。",
+      "list": {
+        "colDomain": "域名",
+        "colSite": "站点",
+        "colRegistrarDns": "注册商 / DNS",
+        "colExpires": "到期",
+        "colSsl": "SSL",
+        "sortByDomain": "按域名排序",
+        "sortByExpires": "按到期时间排序",
+        "primaryBadge": "主域名",
+        "empty": "无符合筛选条件的域名。",
+        "loadFailed": "加载域名列表失败"
+      },
+      "filters": {
+        "ariaLabel": "域名筛选",
+        "search": "搜索",
+        "searchPlaceholder": "域名或注册商…",
+        "expiringWithin": "到期范围",
+        "expiryAll": "全部",
+        "expiryDays": "{days} 天"
+      },
+      "card": {
+        "title": "域名",
+        "add": "添加域名",
+        "loading": "加载中…",
+        "empty": "尚未挂载域名。请添加访客访问站点时使用的主域名。",
+        "primaryBadge": "主域名",
+        "registrarLine": "注册商：{registrar} · DNS：{dns}",
+        "makePrimary": "设为主域名",
+        "deleteAriaLabel": "删除 {domain}",
+        "primarySetToast": "主域名已切换为 {domain}",
+        "removedToast": "已删除 {domain}",
+        "deleteDialogTitle": "删除「{domain}」？",
+        "deleteDialogPrimaryWarning": "这是当前的主域名，删除后站点将没有主域名 —— 请稍后将另一个域名提升为主。",
+        "deleteDialogOnlyOneWarning": "这是该站点唯一的域名，删除后站点将没有任何域名。",
+        "deleting": "删除中…",
+        "delete": "删除",
+        "addDialog": {
+          "title": "添加域名",
+          "description": "粘贴任何域名形态都行 —— 协议 / 路径 / 端口会被自动剥离。",
+          "fieldDomain": "域名",
+          "fieldDomainPlaceholder": "example.com",
+          "fieldRegistrar": "注册商",
+          "fieldRegistrarPlaceholder": "Cloudflare",
+          "fieldExpires": "到期日",
+          "setPrimary": "设为主域名",
+          "submit": "添加域名",
+          "submitting": "添加中…",
+          "addedToast": "已添加 {domain}",
+          "failedToast": "添加失败"
+        }
+      }
+    },
+    "deployments": {
+      "title": "部署",
+      "description": "跨站点部署事件。CI / Agent 通过 POST /api/v1/deployments 上报（按 provider + provider_deployment_id 幂等）。",
+      "list": {
+        "colSite": "站点",
+        "colStatus": "状态",
+        "colCommit": "提交",
+        "colProvider": "提供商",
+        "colDuration": "耗时",
+        "colWhen": "时间",
+        "logLink": "日志",
+        "empty": "暂无部署。可向 <code>/api/v1/deployments</code> 上报。",
+        "loadFailed": "加载部署列表失败"
+      },
+      "filters": {
+        "ariaLabel": "部署筛选",
+        "statusLabel": "状态",
+        "anyStatus": "全部状态",
+        "anyPlaceholder": "全部",
+        "providerLabel": "提供商",
+        "anyProvider": "全部提供商"
+      },
+      "timeline": {
+        "empty": "该站点还没有部署记录。可向 <code>/api/v1/sites/{siteId}/deployments</code> 上报。",
+        "via": "来源 {provider}",
+        "by": "触发人 {actor}",
+        "buildLog": "构建日志"
+      }
+    },
+    "errors": {
+      "title": "错误",
+      "description": "JS / build / API / worker 各端的错误聚合。API key（scope: errors:write）走 POST /api/v1/errors 上报。",
+      "list": {
+        "filterAll": "全部",
+        "filterErrors": "错误",
+        "filterWarnings": "警告",
+        "showingResolved": "显示已解决",
+        "hidingResolved": "隐藏已解决",
+        "colMessage": "消息",
+        "colSource": "来源",
+        "colCount": "次数",
+        "colLastSeen": "最近一次",
+        "noMessage": "(无消息)",
+        "empty": "暂无符合条件的错误。",
+        "details": "详情",
+        "resolve": "标为已解决",
+        "reopen": "重新打开"
+      },
+      "detail": {
+        "title": "错误详情",
+        "close": "关闭",
+        "resolvedBadge": "已解决",
+        "fingerprint": "指纹",
+        "stackTrace": "堆栈",
+        "meta": "元数据",
+        "firstSeen": "首次出现",
+        "lastSeen": "最近一次",
+        "noStack": "(无堆栈)",
+        "noMeta": "(无)"
+      }
+    },
+    "alerts": {
+      "title": "告警",
+      "description": "规则评估指标，通道发出通知。通道配置在数据库内以 AES-256-GCM 加密保存。",
+      "tabHistory": "历史",
+      "tabRules": "规则",
+      "tabChannels": "通道",
+      "list": {
+        "empty": "暂无告警，监控系统一切正常。",
+        "statusFiring": "触发中",
+        "statusResolved": "已恢复",
+        "noMessage": "(无消息)",
+        "firedAt": "{date} 触发",
+        "firedResolvedAt": "{firedAt} 触发 · {resolvedAt} 恢复",
+        "lastDelivery": "最近一次推送：",
+        "markResolved": "标为已恢复",
+        "resolvedToast": "告警已恢复"
+      },
+      "channels": {
+        "configuredTitle": "已配置通道",
+        "empty": "暂无通道。请在右侧新建一个。",
+        "disabledBadge": "已禁用",
+        "test": "测试",
+        "delete": "删除",
+        "addTitle": "新增通道",
+        "fieldName": "名称",
+        "fieldNamePlaceholder": "ops · feishu",
+        "fieldType": "类型",
+        "fieldConfig": "配置（JSON）",
+        "save": "保存通道",
+        "savedToast": "通道已保存",
+        "deletedToast": "通道已删除",
+        "testSentToast": "已发送测试消息",
+        "testFailedToast": "测试失败：{error}",
+        "testUnknownError": "未知错误",
+        "invalidJson": "配置不是合法 JSON"
+      },
+      "rules": {
+        "configuredTitle": "已配置规则",
+        "empty": "暂无规则。",
+        "enabledBadge": "已启用",
+        "offBadge": "已关闭",
+        "delete": "删除",
+        "addTitle": "新增规则（全局）",
+        "fieldName": "名称",
+        "fieldMetric": "指标",
+        "fieldOperator": "比较",
+        "fieldThreshold": "阈值",
+        "fieldConsecutive": "连续命中次数",
+        "fieldChannels": "通道",
+        "noChannelsHint": "尚未配置通道 —— 请先创建。",
+        "save": "保存规则",
+        "savedToast": "规则已保存"
+      }
+    },
+    "integrations": {
+      "title": "集成",
+      "description": "从 Cloudflare、GitHub、GA4 / Plausible、Search Console、AdSense 拉数据。按小时 / 天定时同步；点击 Sync 立刻触发一次。",
+      "loadFailed": "加载集成状态失败：{error}",
+      "unknownError": "未知错误",
+      "card": {
+        "configured": "已配置",
+        "notConfigured": "未配置",
+        "lastSync": "最近同步",
+        "lastError": "最近错误",
+        "sitesTracked": "覆盖站点",
+        "never": "从未",
+        "test": "测试",
+        "connect": "连接",
+        "syncNow": "立即同步",
+        "connectionOk": "{name}：连接成功",
+        "syncStarted": "{name}：同步任务已触发"
+      },
+      "providers": {
+        "cloudflare": {
+          "name": "Cloudflare Pages",
+          "description": "从 CF Pages 项目拉取构建 / 部署历史。请在环境变量配置 CF_API_TOKEN。"
+        },
+        "github": {
+          "name": "GitHub Actions",
+          "description": "把 workflow 运行同步为部署事件。请在环境变量配置 GH_TOKEN。"
+        },
+        "ga4": {
+          "name": "Google Analytics 4",
+          "description": "通过 Data API 拉取每日 PV / UV / 会话数。Service account JSON 放在 GA4_SERVICE_ACCOUNT_JSON。"
+        },
+        "plausible": {
+          "name": "Plausible",
+          "description": "可选的分析 provider。analyticsProvider=plausible 的站点配置 PLAUSIBLE_API_KEY 即可。"
+        },
+        "gsc": {
+          "name": "Search Console",
+          "description": "拉取 impressions / clicks / CTR。需配置 GSC_OAUTH_*，再完成一次性授权。"
+        },
+        "adsense": {
+          "name": "AdSense",
+          "description": "通过 AdSense Management API 拉取每日收入和 RPM。需 OAuth + ADSENSE_ACCOUNT_NAME。"
+        }
+      }
+    },
+    "uptime": {
+      "page": {
+        "timeWindowAria": "时间窗口",
+        "recentFailuresAria": "近期失败",
+        "recentFailuresTitle": "近期失败",
+        "window24h": "最近 24 小时",
+        "window7d": "最近 7 天",
+        "window30d": "最近 30 天",
+        "windowCustom": "最近 {hours} 小时"
+      },
+      "summary": {
+        "ariaLabel": "在线监控概况",
+        "uptimeLabel": "可用率 · {window}",
+        "uptimeHint": "{ok} 次正常 / 共 {total} 次",
+        "avgResponse": "平均响应",
+        "avgResponseHint": "同一窗口内",
+        "failedChecks": "失败次数",
+        "noData": "暂无数据",
+        "windowPercent": "占比 {percent}%"
+      },
+      "chart": {
+        "ariaLabel": "在线监控响应时间",
+        "empty": "所选窗口暂无监控数据。",
+        "maxLabel": "max {ms} ms",
+        "tooltip": "{date}：{ok}/{total} 正常"
+      },
+      "failures": {
+        "empty": "所选窗口暂无失败记录。",
+        "networkError": "网络错误",
+        "noErrorMessage": "无错误信息。",
+        "httpStatus": "HTTP {code}"
+      },
+      "trigger": {
+        "checkNow": "立即检查",
+        "passedToast": "在线检查通过",
+        "failedToast": "在线检查失败",
+        "healthScoreDescription": "当前健康分：{score}",
+        "errorToast": "无法检查站点",
+        "unknownError": "未知错误"
+      }
+    },
+    "audits": {
+      "list": {
+        "empty": "暂无审计记录。请先在上方触发一次。",
+        "colType": "类型",
+        "colStarted": "开始时间",
+        "colDuration": "耗时",
+        "colStatus": "状态",
+        "colScore": "得分",
+        "details": "详情 →",
+        "scoreFormat": "{score}/100",
+        "durationFormat": "{seconds} 秒"
+      },
+      "lighthouse": {
+        "ariaLabel": "Lighthouse 得分",
+        "performance": "Performance",
+        "seo": "SEO",
+        "bestPractices": "Best Practices",
+        "accessibility": "Accessibility"
+      },
+      "trend": {
+        "empty": "运行几次 Lighthouse 后再回来看趋势。",
+        "latest": "最新"
+      },
+      "findings": {
+        "empty": "未发现问题 —— 本次审计很干净。"
+      },
+      "trigger": {
+        "runSeo": "运行 SEO 审计",
+        "queueLighthouse": "排队 Lighthouse",
+        "queuedTitle": "{type} 审计已入队",
+        "queuedDescription": "稍后开始运行",
+        "completeTitle": "{type} 审计完成",
+        "completeDescription": "得分 {score}/100 · 共 {total} 项发现",
+        "failedToast": "无法运行 {type} 审计"
+      },
+      "detail": {
+        "summary": "审计概况",
+        "status": "状态",
+        "score": "得分",
+        "started": "开始时间",
+        "finished": "结束时间",
+        "scoreFormat": "{score}/100"
+      }
+    },
+    "settings": {
+      "title": "设置",
+      "description": "账号资料、API key 与通知偏好。",
+      "signedInAdmin": "当前登录管理员",
+      "themeLabel": "主题",
+      "themeValue": "自动",
+      "themeHint": "在右上角切换浅色 / 深色。",
+      "emptyTitle": "更多设置即将上线",
+      "emptyDescription": "API key 管理随 T25（Agent 任务队列）落地；通知通道页面属于 T16。"
+    }
+  }
+}

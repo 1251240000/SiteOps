@@ -2,6 +2,16 @@
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
+export type RoiWaterfallBucketKey =
+  | 'adRev'
+  | 'affiliate'
+  | 'hosting'
+  | 'domain'
+  | 'content'
+  | 'adsSpend'
+  | 'other'
+  | 'profit';
+
 const usd = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -84,36 +94,52 @@ export function RoiWaterfallChart({ data }: { data: RoiWaterfallDatum[] }) {
 /**
  * Build waterfall buckets from a site-ROI detail. Order: revenue
  * components first (ad, affiliate), then cost components, then total.
+ *
+ * Accepts a translator so callers can localise the bucket labels. The
+ * translator is expected to be bound to `pages.roi.waterfall.buckets`.
  */
-export function buildRoiWaterfall(detail: {
-  breakdown: {
-    adRevenue: number;
-    affiliateRevenue: number;
-    hostingCost: number;
-    domainCost: number;
-    contentCost: number;
-    adsSpendCost: number;
-    otherCost: number;
-  };
-  profit: number;
-}): RoiWaterfallDatum[] {
+export function buildRoiWaterfall(
+  detail: {
+    breakdown: {
+      adRevenue: number;
+      affiliateRevenue: number;
+      hostingCost: number;
+      domainCost: number;
+      contentCost: number;
+      adsSpendCost: number;
+      otherCost: number;
+    };
+    profit: number;
+  },
+  bucketLabel: (key: RoiWaterfallBucketKey) => string,
+): RoiWaterfallDatum[] {
   const b = detail.breakdown;
   const buckets: Array<Omit<RoiWaterfallDatum, 'running'>> = [];
-  if (b.adRevenue > 0) buckets.push({ label: 'Ad rev.', value: b.adRevenue, kind: 'revenue' });
+  if (b.adRevenue > 0)
+    buckets.push({ label: bucketLabel('adRev'), value: b.adRevenue, kind: 'revenue' });
   if (b.affiliateRevenue > 0)
-    buckets.push({ label: 'Affiliate', value: b.affiliateRevenue, kind: 'revenue' });
-  if (b.hostingCost > 0) buckets.push({ label: 'Hosting', value: -b.hostingCost, kind: 'cost' });
-  if (b.domainCost > 0) buckets.push({ label: 'Domain', value: -b.domainCost, kind: 'cost' });
-  if (b.contentCost > 0) buckets.push({ label: 'Content', value: -b.contentCost, kind: 'cost' });
+    buckets.push({ label: bucketLabel('affiliate'), value: b.affiliateRevenue, kind: 'revenue' });
+  if (b.hostingCost > 0)
+    buckets.push({ label: bucketLabel('hosting'), value: -b.hostingCost, kind: 'cost' });
+  if (b.domainCost > 0)
+    buckets.push({ label: bucketLabel('domain'), value: -b.domainCost, kind: 'cost' });
+  if (b.contentCost > 0)
+    buckets.push({ label: bucketLabel('content'), value: -b.contentCost, kind: 'cost' });
   if (b.adsSpendCost > 0)
-    buckets.push({ label: 'Ads spend', value: -b.adsSpendCost, kind: 'cost' });
-  if (b.otherCost > 0) buckets.push({ label: 'Other', value: -b.otherCost, kind: 'cost' });
+    buckets.push({ label: bucketLabel('adsSpend'), value: -b.adsSpendCost, kind: 'cost' });
+  if (b.otherCost > 0)
+    buckets.push({ label: bucketLabel('other'), value: -b.otherCost, kind: 'cost' });
 
   let running = 0;
   const out: RoiWaterfallDatum[] = buckets.map((b2) => {
     running += b2.value;
     return { ...b2, running };
   });
-  out.push({ label: 'Profit', value: detail.profit, running: detail.profit, kind: 'total' });
+  out.push({
+    label: bucketLabel('profit'),
+    value: detail.profit,
+    running: detail.profit,
+    kind: 'total',
+  });
   return out;
 }

@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { parseAsInteger, parseAsString, useQueryState } from 'nuqs';
 import { useMemo } from 'react';
@@ -20,6 +21,8 @@ import {
 const PAGE_SIZE = 20;
 
 export function DeploymentList() {
+  const t = useTranslations('pages.deployments.list');
+  const tCommon = useTranslations('common');
   const [siteId] = useQueryState('siteId', parseAsString.withDefault(''));
   const [status] = useQueryState('status', parseAsString.withDefault(''));
   const [provider] = useQueryState('provider', parseAsString.withDefault(''));
@@ -55,22 +58,22 @@ export function DeploymentList() {
           <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th scope="col" className="px-4 py-3 text-left font-medium">
-                Site
+                {t('colSite')}
               </th>
               <th scope="col" className="px-4 py-3 text-left font-medium">
-                Status
+                {t('colStatus')}
               </th>
               <th scope="col" className="px-4 py-3 text-left font-medium">
-                Commit
+                {t('colCommit')}
               </th>
               <th scope="col" className="px-4 py-3 text-left font-medium">
-                Provider
+                {t('colProvider')}
               </th>
               <th scope="col" className="px-4 py-3 text-left font-medium">
-                Duration
+                {t('colDuration')}
               </th>
               <th scope="col" className="px-4 py-3 text-left font-medium">
-                When
+                {t('colWhen')}
               </th>
             </tr>
           </thead>
@@ -88,14 +91,15 @@ export function DeploymentList() {
             ) : error ? (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-destructive">
-                  {error.message || 'Failed to load deployments'}
+                  {error.message || t('loadFailed')}
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
-                  No deployments yet. POST one to{' '}
-                  <code className="font-mono">/api/v1/deployments</code>.
+                  {t.rich('empty', {
+                    code: (chunks) => <code className="font-mono">{chunks}</code>,
+                  })}
                 </td>
               </tr>
             ) : (
@@ -141,7 +145,7 @@ export function DeploymentList() {
                           rel="noreferrer"
                           className="inline-flex items-center text-xs text-primary hover:underline"
                         >
-                          log <ArrowUpRight className="size-3" />
+                          {t('logLink')} <ArrowUpRight className="size-3" />
                         </a>
                       ) : null}
                     </div>
@@ -156,19 +160,27 @@ export function DeploymentList() {
       <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <span>
           {meta
-            ? `Showing ${items.length ? (meta.page - 1) * meta.limit + 1 : 0}–${(meta.page - 1) * meta.limit + items.length} of ${meta.total}`
+            ? tCommon('pagination.showing', {
+                from: items.length ? (meta.page - 1) * meta.limit + 1 : 0,
+                to: (meta.page - 1) * meta.limit + items.length,
+                total: meta.total,
+              })
             : '\u00A0'}
         </span>
         <div className="flex items-center gap-2">
           <span>
-            Page <strong>{meta?.page ?? page}</strong> of <strong>{meta?.totalPages ?? 1}</strong>
+            {tCommon.rich('pagination.page', {
+              strong: (chunks) => <strong>{chunks}</strong>,
+              page: meta?.page ?? page,
+              total: meta?.totalPages ?? 1,
+            })}
           </span>
           <Button
             size="icon"
             variant="outline"
             disabled={!meta || meta.page <= 1}
             onClick={() => setPage(Math.max(1, (meta?.page ?? page) - 1))}
-            aria-label="Previous page"
+            aria-label={tCommon('pagination.previous')}
           >
             <ChevronLeft className="size-4" />
           </Button>
@@ -177,7 +189,7 @@ export function DeploymentList() {
             variant="outline"
             disabled={!meta || meta.page >= (meta?.totalPages ?? 1)}
             onClick={() => setPage((meta?.page ?? page) + 1)}
-            aria-label="Next page"
+            aria-label={tCommon('pagination.next')}
           >
             <ChevronRight className="size-4" />
           </Button>

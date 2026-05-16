@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl';
+
 export type LhScores = {
   performance: number;
   seo: number;
@@ -12,15 +14,16 @@ function colour(score: number): string {
 }
 
 export function LighthouseScoreCard({ scores }: { scores: LhScores }) {
+  const t = useTranslations('pages.audits.lighthouse');
   const cats: Array<[string, number]> = [
-    ['Performance', scores.performance],
-    ['SEO', scores.seo],
-    ['Best Practices', scores.bestPractices],
-    ['Accessibility', scores.accessibility],
+    [t('performance'), scores.performance],
+    [t('seo'), scores.seo],
+    [t('bestPractices'), scores.bestPractices],
+    [t('accessibility'), scores.accessibility],
   ];
   return (
     <section
-      aria-label="Lighthouse scores"
+      aria-label={t('ariaLabel')}
       className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-4"
     >
       {cats.map(([label, score]) => (

@@ -15,6 +15,10 @@ const envSchema = z.object({
   AUDIT_DATA_DIR: z.string().default('/var/lib/siteops/audits'),
   /** Where to write Lighthouse reports. */
   LIGHTHOUSE_DATA_DIR: z.string().default('/var/lib/siteops/lighthouse'),
+  /** Lighthouse runner mode. `stub` ships deterministic placeholder scores,
+   * `real` boots Chromium via the optional `lighthouse` + `chrome-launcher`
+   * dependencies. Production images set this to `real`. */
+  LIGHTHOUSE_RUNNER: z.enum(['stub', 'real']).default('stub'),
   /** Uptime check default interval (minutes). */
   UPTIME_DEFAULT_INTERVAL_MIN: z.coerce.number().int().min(1).max(60).default(5),
 

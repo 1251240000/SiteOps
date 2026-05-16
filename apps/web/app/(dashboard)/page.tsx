@@ -1,4 +1,5 @@
 import { AlertTriangle, Globe, Rocket, ServerCog } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 
 import { EmptyState } from '@/components/common/empty-state';
 import { PageHeader } from '@/components/common/page-header';
@@ -13,36 +14,41 @@ export const dynamic = 'force-dynamic';
  * that satisfies T07's DataTable acceptance and previews what `/sites` and
  * `/deployments` will look like once T08+ wire real data through.
  */
-export default function OverviewPage() {
+export default async function OverviewPage() {
+  const t = await getTranslations('pages.overview');
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Overview"
-        description="Cross-site KPI snapshot. Real data lands in T08+."
-      />
+      <PageHeader title={t('title')} description={t('description')} />
 
       <section
-        aria-label="Key metrics"
+        aria-label={t('kpiAriaLabel')}
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
-        <StatCard label="Sites tracked" value="—" icon={Globe} hint="0 active · 0 archived" />
-        <StatCard label="Domains" value="—" icon={ServerCog} hint="0 expiring < 30d" />
-        <StatCard label="Deployments (7d)" value="—" icon={Rocket} hint="awaiting T10" />
-        <StatCard label="Open alerts" value="—" icon={AlertTriangle} hint="awaiting T16" />
+        <StatCard label={t('sitesTracked')} value="—" icon={Globe} hint={t('sitesTrackedHint')} />
+        <StatCard label={t('domainsLabel')} value="—" icon={ServerCog} hint={t('domainsHint')} />
+        <StatCard
+          label={t('deploymentsLabel')}
+          value="—"
+          icon={Rocket}
+          hint={t('deploymentsHint')}
+        />
+        <StatCard
+          label={t('openAlerts')}
+          value="—"
+          icon={AlertTriangle}
+          hint={t('openAlertsHint')}
+        />
       </section>
 
-      <section aria-label="Recent activity" className="space-y-3">
+      <section aria-label={t('recentActivityAriaLabel')} className="space-y-3">
         <header className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Recent activity</h2>
-          <span className="text-xs text-muted-foreground">Preview · fake data</span>
+          <h2 className="text-sm font-semibold text-foreground">{t('recentActivity')}</h2>
+          <span className="text-xs text-muted-foreground">{t('recentActivityHint')}</span>
         </header>
         <ActivityTable />
       </section>
 
-      <EmptyState
-        title="Nothing else yet"
-        description="The remaining widgets (uptime sparkline, error rate, traffic) plug in during M2."
-      />
+      <EmptyState title={t('emptyTitle')} description={t('emptyDescription')} />
     </div>
   );
 }

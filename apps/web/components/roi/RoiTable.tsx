@@ -2,6 +2,7 @@
 
 import { type ColumnDef } from '@tanstack/react-table';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { DataTable } from '@/components/common/data-table';
@@ -36,12 +37,6 @@ const pct = new Intl.NumberFormat('en-US', {
 
 const intFmt = new Intl.NumberFormat('en-US');
 
-const FLAG_LABEL: Record<LowEfficiencyFlag, string> = {
-  negative_roi: 'ROI<0',
-  low_rpm: 'low RPM',
-  declining_revenue: 'declining',
-};
-
 /**
  * Global ROI ranking table. Visual conventions:
  *   - Negative ROI rows get a faint red background (`destructive`).
@@ -50,11 +45,14 @@ const FLAG_LABEL: Record<LowEfficiencyFlag, string> = {
  *     "this site needs work" signal.
  */
 export function RoiTable({ rows }: { rows: RoiRow[] }) {
+  const t = useTranslations('pages.roi.table');
+  const tFlag = useTranslations('pages.roi.table.flagsShort');
+  const tStatus = useTranslations('enums.siteStatus');
   const columns = useMemo<ColumnDef<RoiRow>[]>(() => {
     return [
       {
         accessorKey: 'name',
-        header: 'Site',
+        header: t('colSite'),
         cell: ({ row }) => {
           const r = row.original;
           const showWin = r.roi !== null && r.roi >= 2;
@@ -78,7 +76,7 @@ export function RoiTable({ rows }: { rows: RoiRow[] }) {
                   {r.slug}
                   {r.status !== 'active' ? (
                     <span className="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] uppercase">
-                      {r.status}
+                      {tStatus(r.status)}
                     </span>
                   ) : null}
                 </span>
@@ -89,7 +87,7 @@ export function RoiTable({ rows }: { rows: RoiRow[] }) {
       },
       {
         accessorKey: 'pv',
-        header: 'PV',
+        header: t('colPv'),
         cell: ({ row }) => (
           <span className="tabular-nums text-muted-foreground">
             {intFmt.format(row.original.pv)}
@@ -98,17 +96,17 @@ export function RoiTable({ rows }: { rows: RoiRow[] }) {
       },
       {
         accessorKey: 'revenue',
-        header: 'Revenue',
+        header: t('colRevenue'),
         cell: ({ row }) => <span className="tabular-nums">{usd.format(row.original.revenue)}</span>,
       },
       {
         accessorKey: 'cost',
-        header: 'Cost',
+        header: t('colCost'),
         cell: ({ row }) => <span className="tabular-nums">{usd.format(row.original.cost)}</span>,
       },
       {
         accessorKey: 'profit',
-        header: 'Profit',
+        header: t('colProfit'),
         cell: ({ row }) => (
           <span
             className={cn(
@@ -122,11 +120,11 @@ export function RoiTable({ rows }: { rows: RoiRow[] }) {
       },
       {
         accessorKey: 'roi',
-        header: 'ROI',
+        header: t('colRoi'),
         cell: ({ row }) => {
           const roi = row.original.roi;
           if (roi === null) {
-            return <span className="text-muted-foreground">N/A</span>;
+            return <span className="text-muted-foreground">{t('naValue')}</span>;
           }
           return (
             <span
@@ -142,7 +140,7 @@ export function RoiTable({ rows }: { rows: RoiRow[] }) {
       },
       {
         accessorKey: 'rpm',
-        header: 'RPM',
+        header: t('colRpm'),
         cell: ({ row }) => {
           const rpm = row.original.rpm;
           if (rpm === null) return <span className="text-muted-foreground">—</span>;
@@ -151,7 +149,7 @@ export function RoiTable({ rows }: { rows: RoiRow[] }) {
       },
       {
         accessorKey: 'flags',
-        header: 'Flags',
+        header: t('colFlags'),
         cell: ({ row }) => {
           const flags = row.original.flags;
           if (flags.length === 0) return <span className="text-muted-foreground">—</span>;
@@ -162,7 +160,7 @@ export function RoiTable({ rows }: { rows: RoiRow[] }) {
                   key={f}
                   className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-warning"
                 >
-                  {FLAG_LABEL[f]}
+                  {tFlag(f)}
                 </span>
               ))}
             </div>
@@ -170,14 +168,14 @@ export function RoiTable({ rows }: { rows: RoiRow[] }) {
         },
       },
     ];
-  }, []);
+  }, [t, tFlag, tStatus]);
 
   return (
     <DataTable
       data={rows}
       columns={columns}
       pageSize={50}
-      emptyMessage="No sites yet — create one and add cost / revenue data to see ROI."
+      emptyMessage={t('empty')}
       rowClassName={(row) => (row.profit < 0 ? 'bg-destructive/5' : undefined)}
     />
   );

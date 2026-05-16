@@ -2,6 +2,7 @@
 
 import { type ColumnDef } from '@tanstack/react-table';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { DataTable } from '@/components/common/data-table';
@@ -29,11 +30,13 @@ export function TopSitesTable({
   rows: TopSiteRow[];
   metric: 'pv' | 'uv' | 'sessions';
 }) {
+  const t = useTranslations('pages.traffic.topSites');
+  const tMetric = useTranslations('pages.traffic.chart.metric');
   const columns = useMemo<ColumnDef<TopSiteRow>[]>(() => {
     return [
       {
         accessorKey: 'name',
-        header: 'Site',
+        header: t('colSite'),
         cell: ({ row }) => {
           const r = row.original;
           return (
@@ -51,7 +54,7 @@ export function TopSitesTable({
       },
       {
         accessorKey: 'pv',
-        header: 'Page views',
+        header: t('colPv'),
         cell: ({ row }) => (
           <span
             className={row.original.pv > 0 ? 'tabular-nums' : 'tabular-nums text-muted-foreground'}
@@ -62,7 +65,7 @@ export function TopSitesTable({
       },
       {
         accessorKey: 'uv',
-        header: 'Unique visitors',
+        header: t('colUv'),
         cell: ({ row }) => (
           <span
             className={row.original.uv > 0 ? 'tabular-nums' : 'tabular-nums text-muted-foreground'}
@@ -73,7 +76,7 @@ export function TopSitesTable({
       },
       {
         accessorKey: 'sessions',
-        header: 'Sessions',
+        header: t('colSessions'),
         cell: ({ row }) => (
           <span
             className={
@@ -85,20 +88,17 @@ export function TopSitesTable({
         ),
       },
     ];
-  }, []);
+  }, [t]);
 
   return (
-    <section aria-label="Top sites" className="space-y-2">
+    <section aria-label={t('ariaLabel')} className="space-y-2">
       <header className="flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Top sites</h2>
-        <span className="text-xs text-muted-foreground">sorted by {metric}</span>
+        <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
+        <span className="text-xs text-muted-foreground">
+          {t('sortedBy', { metric: tMetric(metric) })}
+        </span>
       </header>
-      <DataTable
-        data={rows}
-        columns={columns}
-        pageSize={10}
-        emptyMessage="No traffic recorded for any site in this window."
-      />
+      <DataTable data={rows} columns={columns} pageSize={10} emptyMessage={t('empty')} />
     </section>
   );
 }

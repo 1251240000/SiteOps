@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -34,6 +35,7 @@ const SAMPLE_CONFIGS: Record<ChannelRow['type'], string> = {
 };
 
 export function ChannelEditor() {
+  const t = useTranslations('pages.alerts.channels');
   const qc = useQueryClient();
   const { data, isLoading } = useQuery<ApiSuccess<ChannelRow[]>, ApiError>({
     queryKey: ['alerts', 'channels'],
@@ -53,7 +55,7 @@ export function ChannelEditor() {
       try {
         config = JSON.parse(draft.configText);
       } catch {
-        throw new Error('Config is not valid JSON');
+        throw new Error(t('invalidJson'));
       }
       return api.post('/alert-channels', {
         name: draft.name,
@@ -63,7 +65,7 @@ export function ChannelEditor() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['alerts', 'channels'] });
-      toast.success('Channel saved');
+      toast.success(t('savedToast'));
       setDraft((d) => ({ ...d, name: '' }));
     },
     onError: (e: Error) => toast.error(e.message),
@@ -73,7 +75,7 @@ export function ChannelEditor() {
     mutationFn: (id) => api.delete(`/alert-channels/${id}`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['alerts', 'channels'] });
-      toast.success('Channel deleted');
+      toast.success(t('deletedToast'));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -82,8 +84,8 @@ export function ChannelEditor() {
     mutationFn: (id) => api.post(`/alert-channels/${id}/test`, {}),
     onSuccess: (res) => {
       const r = (res as { data: { ok: boolean; error?: string } }).data;
-      if (r.ok) toast.success('Test message sent');
-      else toast.error(`Test failed: ${r.error ?? 'unknown'}`);
+      if (r.ok) toast.success(t('testSentToast'));
+      else toast.error(t('testFailedToast', { error: r.error ?? t('testUnknownError') }));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -91,12 +93,12 @@ export function ChannelEditor() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold">Configured channels</h3>
+        <h3 className="text-sm font-semibold">{t('configuredTitle')}</h3>
         {isLoading ? (
           <Skeleton className="h-16 w-full" />
         ) : items.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-            No channels yet. Add one on the right.
+            {t('empty')}
           </p>
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border bg-card">
@@ -106,16 +108,16 @@ export function ChannelEditor() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{c.name}</span>
                     <Badge variant="outline">{c.type}</Badge>
-                    {c.enabled ? null : <Badge variant="muted">disabled</Badge>}
+                    {c.enabled ? null : <Badge variant="muted">{t('disabledBadge')}</Badge>}
                   </div>
                   <span className="font-mono text-xs text-muted-foreground">{c.id}</span>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => testMut.mutate(c.id)}>
-                    Test
+                    {t('test')}
                   </Button>
                   <Button size="sm" variant="destructive" onClick={() => deleteMut.mutate(c.id)}>
-                    Delete
+                    {t('delete')}
                   </Button>
                 </div>
               </li>
@@ -125,37 +127,39 @@ export function ChannelEditor() {
       </section>
 
       <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-        <h3 className="text-sm font-semibold">Add channel</h3>
+        <h3 className="text-sm font-semibold">{t('addTitle')}</h3>
         <div className="space-y-2">
-          <Label htmlFor="ch-name">Name</Label>
+          <Label htmlFor="ch-name">{t('fieldName')}</Label>
           <Input
             id="ch-name"
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            placeholder="ops · feishu"
+            placeholder={t('fieldNamePlaceholder')}
           />
         </div>
         <div className="space-y-2">
-          <Label>Type</Label>
+          <Label>{t('fieldType')}</Label>
           <div className="flex flex-wrap gap-1">
-            {TYPES.map((t) => (
+            {TYPES.map((typeKey) => (
               <button
                 type="button"
-                key={t}
-                onClick={() => setDraft({ ...draft, type: t, configText: SAMPLE_CONFIGS[t] })}
+                key={typeKey}
+                onClick={() =>
+                  setDraft({ ...draft, type: typeKey, configText: SAMPLE_CONFIGS[typeKey] })
+                }
                 className={`rounded-md border px-2 py-1 text-xs ${
-                  draft.type === t
+                  draft.type === typeKey
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {t}
+                {typeKey}
               </button>
             ))}
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="ch-config">Config (JSON)</Label>
+          <Label htmlFor="ch-config">{t('fieldConfig')}</Label>
           <Textarea
             id="ch-config"
             value={draft.configText}
@@ -165,7 +169,7 @@ export function ChannelEditor() {
           />
         </div>
         <Button onClick={() => createMut.mutate()} disabled={!draft.name || createMut.isPending}>
-          Save channel
+          {t('save')}
         </Button>
       </section>
     </div>

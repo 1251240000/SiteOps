@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -95,6 +96,8 @@ export function AffiliateEntryFormDialog({
   onSaved,
   knownPrograms = [],
 }: DialogProps) {
+  const t = useTranslations('pages.revenue.affiliate.form');
+  const tCommon = useTranslations('common');
   const isEdit = Boolean(initial);
   const [submitting, setSubmitting] = useState(false);
   const programListId = `affiliate-programs-${siteId}`;
@@ -138,13 +141,16 @@ export function AffiliateEntryFormDialog({
           ).data
         : (await api.post<AffiliateEntry>(`/revenue/sites/${siteId}/affiliate-entries`, payload))
             .data;
-      toast.success(isEdit ? 'Entry updated' : 'Entry added');
+      toast.success(isEdit ? t('entryUpdated') : t('entryAdded'));
       onSaved(saved);
       onOpenChange(false);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Save failed';
+      const message = err instanceof ApiError ? err.message : t('saveFailed');
       toast.error(message, {
-        description: err instanceof ApiError && err.requestId ? `Req ${err.requestId}` : undefined,
+        description:
+          err instanceof ApiError && err.requestId
+            ? tCommon('requestId', { id: err.requestId })
+            : undefined,
       });
     } finally {
       setSubmitting(false);
@@ -155,13 +161,11 @@ export function AffiliateEntryFormDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {isEdit ? 'Edit affiliate entry' : 'Add affiliate entry'}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{isEdit ? t('titleEdit') : t('titleAdd')}</AlertDialogTitle>
           <p className="text-xs text-muted-foreground">
-            Tip: prefer one entry per <span className="font-medium">program</span> per period so
-            trends stay readable. Amounts are stored in USD; the original currency fields are
-            bookkeeping.
+            {t.rich('subtitle', {
+              strong: (chunks) => <span className="font-medium">{chunks}</span>,
+            })}
           </p>
         </AlertDialogHeader>
 
@@ -173,12 +177,12 @@ export function AffiliateEntryFormDialog({
           noValidate
           aria-busy={submitting}
         >
-          <Field label="Program" error={errors.program?.message} required fullWidth>
+          <Field label={t('fieldProgram')} error={errors.program?.message} required fullWidth>
             <Input
               {...register('program')}
               autoFocus
               autoComplete="off"
-              placeholder="Amazon Associates"
+              placeholder={t('fieldProgramPlaceholder')}
               list={knownPrograms.length ? programListId : undefined}
             />
             {knownPrograms.length ? (
@@ -190,14 +194,14 @@ export function AffiliateEntryFormDialog({
             ) : null}
           </Field>
 
-          <Field label="Period start" error={errors.periodStart?.message} required>
+          <Field label={t('fieldPeriodStart')} error={errors.periodStart?.message} required>
             <Input type="date" {...register('periodStart')} />
           </Field>
-          <Field label="Period end" error={errors.periodEnd?.message} required>
+          <Field label={t('fieldPeriodEnd')} error={errors.periodEnd?.message} required>
             <Input type="date" {...register('periodEnd')} />
           </Field>
 
-          <Field label="Amount (USD)" error={errors.amountUsd?.message} required>
+          <Field label={t('fieldAmountUsd')} error={errors.amountUsd?.message} required>
             <Input
               type="number"
               inputMode="decimal"
@@ -206,31 +210,31 @@ export function AffiliateEntryFormDialog({
               {...register('amountUsd')}
             />
           </Field>
-          <Field label="Payout date" error={errors.payoutDate?.message}>
+          <Field label={t('fieldPayoutDate')} error={errors.payoutDate?.message}>
             <Input type="date" {...register('payoutDate')} />
           </Field>
 
-          <Field label="Original amount" error={errors.amountRaw?.message}>
+          <Field label={t('fieldOriginalAmount')} error={errors.amountRaw?.message}>
             <Input
               type="number"
               inputMode="decimal"
               step="0.0001"
               min="0"
               {...register('amountRaw')}
-              placeholder="optional"
+              placeholder={t('optional')}
             />
           </Field>
-          <Field label="Currency" error={errors.currency?.message}>
+          <Field label={t('fieldCurrency')} error={errors.currency?.message}>
             <Input
               {...register('currency')}
               maxLength={3}
-              placeholder="USD"
+              placeholder={t('fieldCurrencyPlaceholder')}
               className="uppercase"
             />
           </Field>
 
-          <Field label="Notes" error={errors.notes?.message} fullWidth>
-            <Textarea rows={2} {...register('notes')} placeholder="optional" />
+          <Field label={t('fieldNotes')} error={errors.notes?.message} fullWidth>
+            <Textarea rows={2} {...register('notes')} placeholder={t('optional')} />
           </Field>
 
           <div className="col-span-1 flex items-center justify-end gap-2 sm:col-span-2">
@@ -240,10 +244,10 @@ export function AffiliateEntryFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={submitting}
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Add entry'}
+              {submitting ? t('saving') : isEdit ? t('saveChanges') : t('addEntry')}
             </Button>
           </div>
         </form>

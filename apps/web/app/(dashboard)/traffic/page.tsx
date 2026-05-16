@@ -1,11 +1,14 @@
+import { getTranslations } from 'next-intl/server';
+
 import { metrics as metricsSvc } from '@siteops/services';
 
 import { PageHeader } from '@/components/common/page-header';
-import { DateRangePicker, resolveRange } from '@/components/traffic/DateRangePicker';
+import { DateRangePicker } from '@/components/traffic/DateRangePicker';
 import { TopSitesTable } from '@/components/traffic/TopSitesTable';
 import { TrafficKpiRow } from '@/components/traffic/TrafficKpiRow';
 import { TrafficLineChart } from '@/components/traffic/TrafficLineChart';
 import { getDb } from '@/lib/db';
+import { resolveRange } from '@/lib/date-range';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,17 +45,18 @@ export default async function TrafficPage({ searchParams }: PageProps) {
   const metric = readMetric(sp['metric']);
 
   const db = getDb();
-  const [summary, series, topSites] = await Promise.all([
+  const [summary, series, topSites, t] = await Promise.all([
     metricsSvc.trafficService.getGlobalSummary(db, range),
     metricsSvc.trafficService.getGlobalSeries(db, range, granularity),
     metricsSvc.trafficService.getTopSites(db, range, metric, 10),
+    getTranslations('pages.traffic'),
   ]);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Traffic"
-        description={`Global ${range.from} → ${range.to} · ${granularity === 'week' ? 'weekly' : 'daily'} buckets`}
+        title={t('title')}
+        description={t('description', { from: range.from, to: range.to, granularity })}
       />
 
       <DateRangePicker />

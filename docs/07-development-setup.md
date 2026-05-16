@@ -73,6 +73,15 @@ pnpm dev
 | `pnpm db:studio`   | drizzle-kit studio                  |
 | `pnpm format`      | prettier 格式化全仓                 |
 
+> `pnpm dev` 不会自动加载 `.env.local`，先在 shell 里 export，例如
+> `set -a; . ./.env.local; set +a; pnpm dev`。Web 走 Turbopack
+> （`next dev --turbopack`），首次编译比 Webpack 快很多；生产构建仍用 Webpack
+> （`next build`），链路不变。
+>
+> 若通过非 localhost 地址访问（如 LAN IP `10.1.1.10`），在 `.env.local` 加
+> `NEXT_DEV_ALLOWED_ORIGINS=10.1.1.10` 可消除 Next 15 的 `Cross origin request
+detected` 警告。
+
 ## 5. 调试
 
 - VS Code：仓库内提供 `.vscode/launch.json`，可分别附加到 web（Next.js）与 worker。

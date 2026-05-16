@@ -28,10 +28,16 @@ export const UPTIME_FAILURE_ALERT_THRESHOLD = 3;
 export async function processUptimeCheck(
   job: Job<UptimeCheckJobData>,
   config: WorkerConnectionConfig,
-): Promise<{ ok: boolean; consecutiveFailures: number; healthScore: number }> {
+): Promise<
+  | { ok: boolean; consecutiveFailures: number; healthScore: number }
+  | { skipped: true; reason: string }
+> {
   const logger = getWorkerLogger();
   const db = getWorkerDb();
   const data = job.data;
+  if (job.name === 'uptime-tick' || (!data?.siteId && job.id?.startsWith('repeat:'))) {
+    return { skipped: true, reason: 'legacy-uptime-tick' };
+  }
   if (!data?.siteId) {
     throw new Error('uptime-check: missing siteId');
   }

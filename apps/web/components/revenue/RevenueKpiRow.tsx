@@ -1,4 +1,5 @@
 import { CircleDollarSign, Coins, DollarSign, Sparkles } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { StatCard } from '@/components/common/stat-card';
 
@@ -48,46 +49,51 @@ function deltaText(value: number): string {
  * so the operator knows why the cell is blank.
  */
 export function RevenueKpiRow({ summary }: { summary: RevenueKpiSummary }) {
+  const t = useTranslations('pages.revenue.kpis');
   const arpv = summary.pv && summary.pv > 0 ? summary.total / summary.pv : null;
 
   return (
     <section
-      aria-label="Revenue KPIs"
+      aria-label={t('ariaLabel')}
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
     >
       <StatCard
-        label="Total revenue"
+        label={t('totalRevenue')}
         value={usdFmt.format(summary.total)}
         icon={DollarSign}
         delta={{ value: deltaText(summary.delta), tone: pickTone(summary.delta) }}
-        hint={`prev ${usdFmt.format(summary.totalPrev)}`}
+        hint={t('prev', { value: usdFmt.format(summary.totalPrev) })}
       />
       <StatCard
-        label="AdSense"
+        label={t('adSense')}
         value={usdFmt.format(summary.adRevenue)}
         icon={Coins}
         hint={
           summary.total === 0
-            ? 'No revenue this window'
-            : `${pctFmt.format(summary.adRevenue / summary.total)} of total`
+            ? t('noRevenueWindow')
+            : t('shareOfTotal', { percent: pctFmt.format(summary.adRevenue / summary.total) })
         }
       />
       <StatCard
-        label="Affiliate"
+        label={t('affiliate')}
         value={usdFmt.format(summary.affiliateRevenue)}
         icon={CircleDollarSign}
-        hint={summary.topProgram ? `top: ${summary.topProgram}` : 'No affiliate entries'}
+        hint={
+          summary.topProgram
+            ? t('topProgram', { name: summary.topProgram })
+            : t('noAffiliateEntries')
+        }
       />
       <StatCard
-        label="ARPV"
+        label={t('arpv')}
         value={arpv === null ? '—' : arpvFmt.format(arpv)}
         icon={Sparkles}
         hint={
           arpv === null
             ? summary.pv === undefined
-              ? 'PV not loaded'
-              : 'No PV in window'
-            : 'per page view'
+              ? t('pvNotLoaded')
+              : t('noPvInWindow')
+            : t('perPageView')
         }
       />
     </section>

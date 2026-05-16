@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 
 import { Breadcrumbs } from './breadcrumbs';
+import { LocaleSwitcher } from './locale-switcher';
 import { MobileNav } from './mobile-nav';
 import { ThemeToggle } from './theme-toggle';
 import { UserMenu } from './user-menu';
@@ -18,6 +19,7 @@ export async function Topbar() {
       <MobileNav />
       <Breadcrumbs />
       <div className="ml-auto flex items-center gap-1">
+        <LocaleSwitcher />
         <ThemeToggle />
         {user ? <UserMenu email={user.email ?? ''} name={user.name ?? null} /> : null}
       </div>

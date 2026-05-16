@@ -1,4 +1,5 @@
 import { Activity, Clock, ShieldCheck } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { StatCard } from '@/components/common/stat-card';
 
@@ -16,29 +17,32 @@ export function UptimeSummary({
   value: UptimeSummaryValue;
   windowLabel: string;
 }) {
+  const t = useTranslations('pages.uptime.summary');
   const pct = (value.okRate * 100).toFixed(value.okRate >= 0.999 ? 2 : 1);
   return (
-    <section aria-label="Uptime summary" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <section aria-label={t('ariaLabel')} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <StatCard
-        label={`Uptime · ${windowLabel}`}
+        label={t('uptimeLabel', { window: windowLabel })}
         value={`${pct}%`}
         icon={ShieldCheck}
-        hint={`${value.ok} ok / ${value.total} checks`}
+        hint={t('uptimeHint', { ok: value.ok, total: value.total })}
       />
       <StatCard
-        label="Avg response"
+        label={t('avgResponse')}
         value={value.avgResponseTimeMs == null ? '—' : `${value.avgResponseTimeMs} ms`}
         icon={Clock}
-        hint="Across the same window"
+        hint={t('avgResponseHint')}
       />
       <StatCard
-        label="Failed checks"
+        label={t('failedChecks')}
         value={`${value.total - value.ok}`}
         icon={Activity}
         hint={
           value.total === 0
-            ? 'No data yet'
-            : `${(((value.total - value.ok) / value.total) * 100).toFixed(1)}% of window`
+            ? t('noData')
+            : t('windowPercent', {
+                percent: (((value.total - value.ok) / value.total) * 100).toFixed(1),
+              })
         }
       />
     </section>

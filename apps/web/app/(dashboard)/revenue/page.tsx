@@ -1,11 +1,14 @@
+import { getTranslations } from 'next-intl/server';
+
 import { revenue as revenueSvc } from '@siteops/services';
 
 import { PageHeader } from '@/components/common/page-header';
-import { DateRangePicker, resolveRange } from '@/components/traffic/DateRangePicker';
+import { DateRangePicker } from '@/components/traffic/DateRangePicker';
 import { RevenueKpiRow } from '@/components/revenue/RevenueKpiRow';
 import { RevenueStackedBarChart } from '@/components/revenue/RevenueStackedBarChart';
 import { TopRevenueSitesTable } from '@/components/revenue/TopRevenueSitesTable';
 import { getDb } from '@/lib/db';
+import { resolveRange } from '@/lib/date-range';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,17 +37,18 @@ export default async function RevenuePage({ searchParams }: PageProps) {
 
   const db = getDb();
   const deps = { db };
-  const [summary, series, topSites] = await Promise.all([
+  const [summary, series, topSites, t] = await Promise.all([
     revenueSvc.revenueService.getGlobalRevenueSummary(deps, range),
     revenueSvc.revenueService.getGlobalRevenueSeries(deps, range, granularity),
     revenueSvc.revenueService.getTopRevenueSites(deps, range, 10),
+    getTranslations('pages.revenue'),
   ]);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Revenue"
-        description={`Global ${range.from} → ${range.to} · ${granularity === 'week' ? 'weekly' : 'daily'} buckets`}
+        title={t('title')}
+        description={t('description', { from: range.from, to: range.to, granularity })}
       />
 
       <DateRangePicker />

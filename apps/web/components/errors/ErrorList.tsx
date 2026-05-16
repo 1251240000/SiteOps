@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { parseAsString, useQueryState } from 'nuqs';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -28,6 +29,8 @@ type ErrorRow = {
 const queryKey = (q: Record<string, string>) => ['errors', q] as const;
 
 export function ErrorList() {
+  const t = useTranslations('pages.errors.list');
+  const tEnumLevel = useTranslations('enums.errorLevel');
   const [level, setLevel] = useQueryState('level', parseAsString.withDefault(''));
   const [resolved, setResolved] = useQueryState('resolved', parseAsString.withDefault('false'));
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -62,21 +65,21 @@ export function ErrorList() {
           variant={level === '' ? 'default' : 'outline'}
           onClick={() => void setLevel(null)}
         >
-          All
+          {t('filterAll')}
         </Button>
         <Button
           size="sm"
           variant={level === 'error' ? 'default' : 'outline'}
           onClick={() => void setLevel('error')}
         >
-          Errors
+          {t('filterErrors')}
         </Button>
         <Button
           size="sm"
           variant={level === 'warning' ? 'default' : 'outline'}
           onClick={() => void setLevel('warning')}
         >
-          Warnings
+          {t('filterWarnings')}
         </Button>
         <span className="ml-auto" />
         <Button
@@ -84,7 +87,7 @@ export function ErrorList() {
           variant={resolved === 'true' ? 'default' : 'outline'}
           onClick={() => void setResolved(resolved === 'true' ? 'false' : 'true')}
         >
-          {resolved === 'true' ? 'Showing resolved' : 'Hiding resolved'}
+          {resolved === 'true' ? t('showingResolved') : t('hidingResolved')}
         </Button>
       </div>
 
@@ -92,10 +95,10 @@ export function ErrorList() {
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Message</th>
-              <th className="px-4 py-3 text-left font-medium">Source</th>
-              <th className="px-4 py-3 text-left font-medium">Count</th>
-              <th className="px-4 py-3 text-left font-medium">Last seen</th>
+              <th className="px-4 py-3 text-left font-medium">{t('colMessage')}</th>
+              <th className="px-4 py-3 text-left font-medium">{t('colSource')}</th>
+              <th className="px-4 py-3 text-left font-medium">{t('colCount')}</th>
+              <th className="px-4 py-3 text-left font-medium">{t('colLastSeen')}</th>
               <th />
             </tr>
           </thead>
@@ -119,7 +122,7 @@ export function ErrorList() {
             ) : items.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
-                  No matching errors.
+                  {t('empty')}
                 </td>
               </tr>
             ) : (
@@ -127,7 +130,7 @@ export function ErrorList() {
                 <tr key={row.id} className="hover:bg-muted/40">
                   <td className="px-4 py-3 align-middle">
                     <div className="space-y-1">
-                      <span className="font-medium">{row.message ?? '(no message)'}</span>
+                      <span className="font-medium">{row.message ?? t('noMessage')}</span>
                       <p className="font-mono text-xs text-muted-foreground">
                         {row.fingerprint.slice(0, 12)}…
                       </p>
@@ -137,7 +140,9 @@ export function ErrorList() {
                     <div className="flex flex-col gap-1">
                       <Badge variant="outline">{row.source}</Badge>
                       <Badge variant={row.level === 'error' ? 'destructive' : 'warning'}>
-                        {row.level}
+                        {row.level === 'error' || row.level === 'warning'
+                          ? tEnumLevel(row.level)
+                          : row.level}
                       </Badge>
                     </div>
                   </td>
@@ -147,7 +152,7 @@ export function ErrorList() {
                   </td>
                   <td className="px-4 py-3 align-middle text-right">
                     <Button size="sm" variant="ghost" onClick={() => setSelectedId(row.id)}>
-                      Details
+                      {t('details')}
                     </Button>
                     <Button
                       size="sm"
@@ -155,7 +160,7 @@ export function ErrorList() {
                       className="ml-2"
                       onClick={() => resolveMut.mutate({ id: row.id, resolved: !row.resolvedAt })}
                     >
-                      {row.resolvedAt ? 'Reopen' : 'Resolve'}
+                      {row.resolvedAt ? t('reopen') : t('resolve')}
                     </Button>
                   </td>
                 </tr>

@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { type ColumnDef } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { parseAsInteger, parseAsString, useQueryState } from 'nuqs';
@@ -34,6 +35,10 @@ const SORTABLE_COLS: Record<
 
 export function SiteList() {
   const router = useRouter();
+  const t = useTranslations('pages.sites.list');
+  const tCommon = useTranslations('common');
+  const tEnumStatus = useTranslations('enums.siteStatus');
+  const tEnumType = useTranslations('enums.siteType');
   const [q] = useQueryState('q', parseAsString.withDefault(''));
   const [siteType] = useQueryState('siteType', parseAsString.withDefault(''));
   const [status] = useQueryState('status', parseAsString.withDefault(''));
@@ -72,7 +77,7 @@ export function SiteList() {
       {
         id: 'name',
         accessorFn: (s) => s.name,
-        header: 'Name',
+        header: t('colName'),
         cell: ({ row }) => (
           <div className="flex flex-col">
             <Link
@@ -88,7 +93,7 @@ export function SiteList() {
       {
         id: 'primary',
         accessorFn: (s) => s.primaryUrl,
-        header: 'Primary URL',
+        header: t('colPrimary'),
         cell: ({ row }) => (
           <span className="font-mono text-xs text-muted-foreground">{row.original.primaryUrl}</span>
         ),
@@ -96,29 +101,29 @@ export function SiteList() {
       {
         id: 'type',
         accessorFn: (s) => s.siteType,
-        header: 'Type',
-        cell: ({ row }) => <Badge variant="outline">{row.original.siteType}</Badge>,
+        header: t('colType'),
+        cell: ({ row }) => <Badge variant="outline">{tEnumType(row.original.siteType)}</Badge>,
       },
       {
         id: 'status',
         accessorFn: (s) => s.status,
-        header: 'Status',
+        header: t('colStatus'),
         cell: ({ row }) => (
           <Badge variant={STATUS_VARIANT[row.original.status] ?? 'outline'}>
-            {row.original.status}
+            {tEnumStatus(row.original.status)}
           </Badge>
         ),
       },
       {
         id: 'healthScore',
         accessorFn: (s) => s.healthScore,
-        header: 'Health',
+        header: t('colHealth'),
         cell: ({ row }) => `${row.original.healthScore}`,
       },
       {
         id: 'createdAt',
         accessorFn: (s) => s.createdAt,
-        header: 'Created',
+        header: t('colCreated'),
         cell: ({ row }) => (
           <time
             dateTime={new Date(row.original.createdAt).toISOString()}
@@ -129,7 +134,7 @@ export function SiteList() {
         ),
       },
     ],
-    [],
+    [t, tEnumStatus, tEnumType],
   );
 
   function onSortClick(colId: keyof typeof SORTABLE_COLS) {
@@ -163,7 +168,7 @@ export function SiteList() {
                         type="button"
                         onClick={() => onSortClick(id as keyof typeof SORTABLE_COLS)}
                         className="inline-flex items-center gap-1 hover:text-foreground"
-                        aria-label={`Sort by ${id}`}
+                        aria-label={t('sortByAriaLabel', { column: col.header as string })}
                       >
                         {col.header as string}
                         {renderSortIcon(id)}
@@ -190,7 +195,7 @@ export function SiteList() {
             ) : error ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-10 text-center text-destructive">
-                  {error.message || 'Failed to load sites'}
+                  {error.message || t('loadFailed')}
                 </td>
               </tr>
             ) : items.length === 0 ? (
@@ -199,7 +204,7 @@ export function SiteList() {
                   colSpan={columns.length}
                   className="px-4 py-10 text-center text-muted-foreground"
                 >
-                  No sites match the current filters.
+                  {t('empty')}
                 </td>
               </tr>
             ) : (
@@ -249,19 +254,27 @@ export function SiteList() {
       >
         <span>
           {meta
-            ? `Showing ${items.length ? (meta.page - 1) * meta.limit + 1 : 0}–${(meta.page - 1) * meta.limit + items.length} of ${meta.total}`
+            ? tCommon('pagination.showing', {
+                from: items.length ? (meta.page - 1) * meta.limit + 1 : 0,
+                to: (meta.page - 1) * meta.limit + items.length,
+                total: meta.total,
+              })
             : '\u00A0'}
         </span>
         <div className="flex items-center gap-2">
           <span>
-            Page <strong>{meta?.page ?? page}</strong> of <strong>{meta?.totalPages ?? 1}</strong>
+            {tCommon.rich('pagination.page', {
+              strong: (chunks) => <strong>{chunks}</strong>,
+              page: meta?.page ?? page,
+              total: meta?.totalPages ?? 1,
+            })}
           </span>
           <Button
             size="icon"
             variant="outline"
             disabled={!meta || meta.page <= 1}
             onClick={() => setPage(Math.max(1, (meta?.page ?? page) - 1))}
-            aria-label="Previous page"
+            aria-label={tCommon('pagination.previous')}
           >
             <ChevronLeft className="size-4" />
           </Button>
@@ -270,7 +283,7 @@ export function SiteList() {
             variant="outline"
             disabled={!meta || meta.page >= (meta?.totalPages ?? 1)}
             onClick={() => setPage((meta?.page ?? page) + 1)}
-            aria-label="Next page"
+            aria-label={tCommon('pagination.next')}
           >
             <ChevronRight className="size-4" />
           </Button>

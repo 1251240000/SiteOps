@@ -16,7 +16,7 @@
 | --------------------------------- | -------------------------------- | ---- | ---: | -------- |
 | [T22](./T22-traffic-dashboard.md) | 流量看板（单站 + 全局）          | ✅   |  8 h | T19, T20 |
 | [T23](./T23-revenue-dashboard.md) | 收入看板（Ads + Affiliate 手动） | ✅   |  6 h | T21      |
-| [T24](./T24-roi-evaluation.md)    | ROI 计算与低效站点识别           | ⬜   |  4 h | T22, T23 |
+| [T24](./T24-roi-evaluation.md)    | ROI 计算与低效站点识别           | ✅   |  4 h | T22, T23 |
 
 ## 数据流概览
 
@@ -52,8 +52,8 @@
 
 ## 里程碑完成条件
 
-- [ ] `/(dashboard)/traffic`、`/(dashboard)/revenue`、`/(dashboard)/roi` 三个页面在 `pnpm dev` 下可用
-- [ ] 至少一个真实站点的 30 天数据可以从原始表渲染到图表（无需 mock）
-- [ ] 联盟收入 + 成本录入双向 CRUD 走通
-- [ ] ROI 排序表能识别并高亮 ROI < 0 的站点
-- [ ] 全部新增 service 走单元测试，`pnpm -r test` 全绿
+- [x] `/(dashboard)/traffic`、`/(dashboard)/revenue`、`/(dashboard)/roi` 三个页面在 `pnpm dev` 下可用
+- [x] 至少一个真实站点的 30 天数据可以从原始表渲染到图表（无需 mock）
+- [x] 联盟收入 + 成本录入双向 CRUD 走通
+- [x] ROI 排序表能识别并高亮 ROI < 0 的站点
+- [x] 全部新增 service 走单元测试，`pnpm -r test` 全绿

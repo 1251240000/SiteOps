@@ -1,6 +1,7 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
+import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { DataTable } from '@/components/common/data-table';
@@ -60,36 +61,43 @@ const STATUS_BADGE: Record<ActivityRow['status'], string> = {
   fail: 'bg-destructive/15 text-destructive ring-1 ring-inset ring-destructive/30',
 };
 
-const EVENT_LABEL: Record<ActivityRow['event'], string> = {
-  deploy: 'Deploy',
-  alert: 'Alert',
-  audit: 'Audit',
-};
-
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-
 export function ActivityTable() {
+  const t = useTranslations('pages.overview.activity');
+  const locale = useLocale();
   const data = useMemo(() => generateRows(25), []);
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    [locale],
+  );
+  const eventLabel = useMemo<Record<ActivityRow['event'], string>>(
+    () => ({
+      deploy: t('eventDeploy'),
+      alert: t('eventAlert'),
+      audit: t('eventAudit'),
+    }),
+    [t],
+  );
   const columns = useMemo<ColumnDef<ActivityRow>[]>(
     () => [
       {
         accessorKey: 'site',
-        header: 'Site',
+        header: t('colSite'),
         cell: ({ row }) => <span className="font-medium text-foreground">{row.original.site}</span>,
       },
       {
         accessorKey: 'event',
-        header: 'Event',
-        cell: ({ row }) => EVENT_LABEL[row.original.event],
+        header: t('colEvent'),
+        cell: ({ row }) => eventLabel[row.original.event],
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('colStatus'),
         cell: ({ row }) => {
           const s = row.original.status;
           return (
@@ -103,12 +111,12 @@ export function ActivityTable() {
       },
       {
         accessorKey: 'durationMs',
-        header: 'Duration',
-        cell: ({ row }) => `${row.original.durationMs} ms`,
+        header: t('colDuration'),
+        cell: ({ row }) => t('durationFormat', { ms: row.original.durationMs }),
       },
       {
         accessorKey: 'at',
-        header: 'When',
+        header: t('colWhen'),
         cell: ({ row }) => (
           <time dateTime={row.original.at} className="tabular-nums text-muted-foreground">
             {dateFormatter.format(new Date(row.original.at))}
@@ -116,7 +124,7 @@ export function ActivityTable() {
         ),
       },
     ],
-    [],
+    [t, eventLabel, dateFormatter],
   );
 
   return <DataTable data={data} columns={columns} pageSize={8} />;

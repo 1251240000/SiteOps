@@ -1,6 +1,7 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { useState, type FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -10,11 +11,14 @@ type LoginFormProps = {
   initialError?: string | undefined;
 };
 
+type AuthErrorKey = 'errorInvalid' | 'errorGeneric';
+
 const inputClass =
   'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function LoginForm({ callbackUrl, initialError }: LoginFormProps) {
-  const [error, setError] = useState<string | null>(
+  const t = useTranslations('auth');
+  const [error, setError] = useState<AuthErrorKey | null>(
     initialError ? translateAuthError(initialError) : null,
   );
   const [submitting, setSubmitting] = useState(false);
@@ -34,13 +38,13 @@ export function LoginForm({ callbackUrl, initialError }: LoginFormProps) {
         callbackUrl,
       });
       if (!res || res.error) {
-        setError('Invalid email or password.');
+        setError('errorInvalid');
         setSubmitting(false);
         return;
       }
       window.location.assign(res.url ?? callbackUrl);
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError('errorGeneric');
       setSubmitting(false);
     }
   }
@@ -49,18 +53,20 @@ export function LoginForm({ callbackUrl, initialError }: LoginFormProps) {
     <form
       onSubmit={onSubmit}
       className="space-y-4 rounded-lg border border-border bg-card p-6 text-card-foreground shadow-sm"
-      aria-label="Sign in"
+      aria-label={t('formAriaLabel')}
     >
       <div className="space-y-1">
-        <h1 className="text-lg font-semibold tracking-tight">Sign in to siteops</h1>
+        <h1 className="text-lg font-semibold tracking-tight">{t('signInTitle')}</h1>
         <p className="text-sm text-muted-foreground">
-          Single-admin login. See <code className="text-xs">.env.example</code> for the seed user.
+          {t.rich('signInDescription', {
+            code: (chunks) => <code className="text-xs">{chunks}</code>,
+          })}
         </p>
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="email" className="text-sm font-medium text-foreground">
-          Email
+          {t('email')}
         </label>
         <input
           id="email"
@@ -75,7 +81,7 @@ export function LoginForm({ callbackUrl, initialError }: LoginFormProps) {
 
       <div className="space-y-1.5">
         <label htmlFor="password" className="text-sm font-medium text-foreground">
-          Password
+          {t('password')}
         </label>
         <input
           id="password"
@@ -92,18 +98,18 @@ export function LoginForm({ callbackUrl, initialError }: LoginFormProps) {
           role="alert"
           className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
-          {error}
+          {t(error)}
         </div>
       ) : null}
 
       <Button type="submit" disabled={submitting} className="w-full">
-        {submitting ? 'Signing in…' : 'Sign in'}
+        {submitting ? t('submitting') : t('submit')}
       </Button>
     </form>
   );
 }
 
-function translateAuthError(code: string): string {
-  if (code === 'CredentialsSignin') return 'Invalid email or password.';
-  return 'Unable to sign in. Please try again.';
+function translateAuthError(code: string): AuthErrorKey {
+  if (code === 'CredentialsSignin') return 'errorInvalid';
+  return 'errorGeneric';
 }

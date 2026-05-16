@@ -27,6 +27,10 @@
     "@siteops/shared": "workspace:*",
     "cheerio": "^1.0.0"
   },
+  "optionalDependencies": {
+    "chrome-launcher": "^1.1.2",
+    "lighthouse": "^12.2.1"
+  },
   "devDependencies": {
     "@siteops/eslint-config": "workspace:*",
     "@siteops/tsconfig": "workspace:*",

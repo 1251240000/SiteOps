@@ -9,7 +9,7 @@ export type LhScores = {
 
 function colour(score: number): string {
   if (score < 0.5) return 'text-destructive';
-  if (score < 0.9) return 'text-warning-foreground';
+  if (score < 0.9) return 'text-warning';
   return 'text-success';
 }
 

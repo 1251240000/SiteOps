@@ -57,7 +57,7 @@ function generateRows(n: number): ActivityRow[] {
 
 const STATUS_BADGE: Record<ActivityRow['status'], string> = {
   ok: 'bg-success/15 text-success ring-1 ring-inset ring-success/30',
-  warn: 'bg-warning/15 text-warning-foreground ring-1 ring-inset ring-warning/40',
+  warn: 'bg-warning/15 text-warning ring-1 ring-inset ring-warning/40',
   fail: 'bg-destructive/15 text-destructive ring-1 ring-inset ring-destructive/30',
 };
 

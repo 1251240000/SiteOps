@@ -155,12 +155,60 @@
 
 ## 4. Webhook 入口（站点端 → 平台）
 
-| 路径                            | 用途                       |
-| ------------------------------- | -------------------------- |
-| `POST /api/v1/hooks/cloudflare` | CF Pages 部署事件回调      |
-| `POST /api/v1/hooks/github`     | GitHub Actions / push 事件 |
+| 路径                                        | 用途                       |
+| ------------------------------------------- | -------------------------- |
+| `POST /api/v1/hooks/cloudflare`             | CF Pages 部署事件回调      |
+| `POST /api/v1/hooks/github`                 | GitHub Actions / push 事件 |
+| `POST /api/v1/hooks/{provider}/replay/{id}` | admin 手动重放历史投递     |
 
 签名校验必须开启（HMAC）。
+
+### 4.1 签名格式
+
+| Provider     | 签名头                | 算法        | 编码           |
+| ------------ | --------------------- | ----------- | -------------- |
+| `cloudflare` | `cf-webhook-auth`     | HMAC-SHA256 | hex            |
+| `github`     | `x-hub-signature-256` | HMAC-SHA256 | `sha256=<hex>` |
+
+校验在 service 层 (`webhookService.verifyAndIngest`) 用 `crypto.timingSafeEqual` 做长度归一比较；长度不同也走 fallback 避免侧信道。`Content-Type` 强制 `application/json`，其它（如 GitHub 旧的 `application/x-www-form-urlencoded`）一律 415。
+
+### 4.2 响应矩阵
+
+| 情形                                                    | 状态码 | 说明                                                                                                          |
+| ------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
+| 未配置该 provider 的 secret                             | `503`  | `{ error: { code: 'webhook_not_configured' } }`                                                               |
+| Content-Type 非 JSON                                    | `415`  | `unsupported_media_type`                                                                                      |
+| 缺 `delivery_id` / `event_type` 或 payload 非 JSON 对象 | `400`  | `validation_failed`                                                                                           |
+| 签名缺失 / 校验失败                                     | `401`  | 仍然写入 `webhook_events`（`signature_ok=false`）便于审计                                                     |
+| 同源 IP 5 分钟内 > 50 次坏签名                          | `401`  | 退到 `rate_limited`，不再入库                                                                                 |
+| 同一 `(provider, delivery_id)` 第二次投递               | `200`  | `{ data: { id, duplicate: true } }` — **不**重跑 dispatch                                                     |
+| 全部通过                                                | `202`  | `{ data: { id, duplicate: false } }`；`meta.dispatch_failed=true` 表示下游 service 抛错（webhook 通道已 ack） |
+
+`meta.dispatch_failed=true` 时 row 的 `error` 字段会保留下游错误，admin 可用 replay 路径修复。
+
+### 4.3 dispatch 映射
+
+| Provider | event_type                 | 行为                                                                                        |
+| -------- | -------------------------- | ------------------------------------------------------------------------------------------- |
+| CF       | `deployment.started`       | `deploymentService.create({ provider:'cloudflare_pages', status:'building' })`              |
+| CF       | `deployment.success`       | 同上 `status='success'`，附 `commitSha / branch / buildLogUrl`                              |
+| CF       | `deployment.failure`       | `status='failed'`                                                                           |
+| GH       | `workflow_run.completed`   | `conclusion=success → success`；否则 `failed`；Pages 工作流 → `github_pages`，否则 `manual` |
+| GH       | `workflow_run.in_progress` | `status='building'`                                                                         |
+| GH       | `push`                     | 仅入库 `webhook_events`，**不**创建 deployment                                              |
+| GH       | `deployment_status`        | 转 `deploymentService.create`，state→status                                                 |
+| GH       | `ping`                     | 仅返回 `accepted`；用于初次接入 GitHub 时的连接性测试                                       |
+
+upsert 的幂等由 `(provider, provider_deployment_id)` 唯一索引保证（T10 已落地）；webhook 与 cron 即使竞争入库也只会汇成一行。
+
+### 4.4 replay 语义
+
+`POST /api/v1/hooks/{provider}/replay/{id}` 仅接受 admin session（不接受 API key）。
+
+- 行为：从 `webhook_events` 读 row → 把 `payload` 重新喂回 dispatch path → 写新的 `processed_at` / `error`，并 `attempts += 1`
+- **不重新校验签名**——payload 已落库，视为可信
+- 不能 replay `signature_ok=false` 的 row（403 `forbidden`）
+- path 里的 provider 必须等于 row 的 provider，否则 400 — 防 admin 手滑跨 provider 重放
 
 ## 5. 限流
 

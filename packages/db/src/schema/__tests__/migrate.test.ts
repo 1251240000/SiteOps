@@ -56,6 +56,8 @@ describe('migrations', () => {
       'integration_credentials',
       'affiliate_entries',
       'site_costs',
+      'tasks',
+      'webhook_events',
     ]) {
       expect(names).toContain(t);
     }

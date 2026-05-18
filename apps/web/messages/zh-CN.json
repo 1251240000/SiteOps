@@ -112,6 +112,10 @@
     "errors": "错误",
     "alerts": "告警",
     "integrations": "集成",
+    "agentRuns": "Agent 调用",
+    "tasks": "任务队列",
+    "webhooks": "Webhook 接收",
+    "apiKeys": "API keys",
     "settings": "设置",
     "sectionsAriaLabel": "导航",
     "breadcrumbAriaLabel": "面包屑"
@@ -147,14 +151,14 @@
       "domainsLabel": "域名",
       "domainsHint": "30 天内到期：0",
       "deploymentsLabel": "部署（7 天）",
-      "deploymentsHint": "等待 T10",
+      "deploymentsHint": "近 7 天",
       "openAlerts": "未关闭告警",
-      "openAlertsHint": "等待 T16",
+      "openAlertsHint": "当前未关闭",
       "recentActivity": "最近活动",
       "recentActivityHint": "预览 · 模拟数据",
       "recentActivityAriaLabel": "最近活动",
-      "emptyTitle": "暂无更多内容",
-      "emptyDescription": "uptime sparkline、错误率、流量等其他卡片将在 M2 接入。",
+      "emptyTitle": "更多概览卡片即将上线",
+      "emptyDescription": "单站点 sparkline 与错误预算卡片会在后续迭代加入。流量 / 收入 / Agent 调用请从侧栏进入对应页面。",
       "activity": {
         "colSite": "站点",
         "colEvent": "事件",
@@ -234,8 +238,8 @@
         "updatedToast": "已更新站点「{name}」"
       },
       "detail": {
-        "emptyTitle": "更多组件将在 M2 接入",
-        "emptyDescription": "uptime sparkline、最近审计、部署时间线、错误率会随对应任务上线。",
+        "emptyTitle": "更多站点组件即将上线",
+        "emptyDescription": "下方页签内的占位卡片已可用；后续迭代会补充单站点 sparkline 与异常卡片。",
         "tabsAriaLabel": "站点子页面",
         "tabOverview": "概览",
         "tabTraffic": "流量",
@@ -835,7 +839,181 @@
       "themeValue": "自动",
       "themeHint": "在右上角切换浅色 / 深色。",
       "emptyTitle": "更多设置即将上线",
-      "emptyDescription": "API key 管理随 T25（Agent 任务队列）落地；通知通道页面属于 T16。"
+      "emptyDescription": "通知通道与规则路由会在后续迭代加入。API key 管理已在侧栏「API keys」页面提供。"
+    },
+    "webhooks": {
+      "title": "Webhook 接收",
+      "description": "来自 CF Notifications 与 GitHub 的 webhook 调用记录。失败 / 签名失败的行作审计保留；Admin 修复下游后可重放失败记录。",
+      "table": {
+        "providerFilter": "提供方",
+        "stateFilter": "状态",
+        "signatureFilter": "签名",
+        "colWhen": "时间",
+        "colProvider": "提供方",
+        "colEvent": "事件",
+        "colDelivery": "投递 ID",
+        "colState": "状态",
+        "colAttempts": "重试",
+        "replay": "重放",
+        "badSig": "签名失败",
+        "empty": "没有符合条件的 webhook 记录。",
+        "loadFailed": "加载 webhook 记录失败。",
+        "replayedToast": "重放成功",
+        "replayFailedToast": "重放完成，但下游仍然报错 — 请看 error 列。",
+        "replayFailed": "重放失败",
+        "providers": {
+          "all": "全部提供方",
+          "cloudflare": "Cloudflare",
+          "github": "GitHub"
+        },
+        "states": {
+          "all": "全部状态",
+          "processed": "已处理",
+          "failed": "失败",
+          "pending": "待处理",
+          "bad-sig": "签名失败"
+        },
+        "signature": {
+          "all": "全部",
+          "true": "有效",
+          "false": "无效"
+        }
+      }
+    },
+    "tasks": {
+      "title": "任务队列",
+      "description": "供外部 Agent 拉取的任务队列（T25）。在这里分流失败 / 过期任务；Admin 可取消状态为 queued 或 claimed 的任务。",
+      "kpi": {
+        "ariaLabel": "任务队列计数",
+        "queued": "在队",
+        "claimed": "执行中",
+        "failed": "失败",
+        "succeeded": "成功"
+      },
+      "table": {
+        "statusFilter": "状态",
+        "anyStatus": "全部状态",
+        "kindFilter": "类型",
+        "kindPlaceholder": "例如 content.draft",
+        "siteFilter": "站点 ID",
+        "sitePlaceholder": "UUID",
+        "colKind": "类型",
+        "colStatus": "状态",
+        "colAttempts": "重试",
+        "colPriority": "优先级",
+        "colAvailableAt": "可领取",
+        "colCreated": "创建于",
+        "actionCancel": "取消任务",
+        "empty": "没有符合过滤条件的任务。",
+        "loadFailed": "加载任务失败。",
+        "cancelledToast": "已取消任务",
+        "cancelFailed": "取消失败",
+        "cancelConfirmTitle": "确认取消这个任务？",
+        "cancelConfirmDescription": "「{kind}」会被终止取消。当前持有租约的 Worker 下一次 heartbeat 会收到冲突。",
+        "cancelDialog": "留下任务",
+        "confirmCancel": "取消任务"
+      }
+    },
+    "apiKeys": {
+      "title": "API keys",
+      "description": "外部 Agent 与 CI 调用 API 所用的 Bearer token。明文只在创建时展示一次，请事后存入你的密钥管理器。",
+      "create": {
+        "trigger": "创建 key",
+        "title": "创建 API key",
+        "description": "选择 Agent 需要的 scope 与（可选）过期时间。明文 token 仅在创建后出现一次。",
+        "nameLabel": "名称",
+        "namePlaceholder": "例如 ci-deployer / content-agent",
+        "scopesLabel": "Scopes",
+        "scopesRequired": "请至少选一个 scope。",
+        "expiresAtLabel": "过期时间",
+        "expiresAtHint": "留空表示永不过期。本地时间，保存时转为 UTC。",
+        "submit": "创建",
+        "cancel": "取消",
+        "errorGeneric": "创建 API key 失败。",
+        "issuedTitle": "复制你的新 key",
+        "issuedDescription": "这是我们唯一会展示明文的一次。关闭弹窗后就不能再看到它。",
+        "plaintextLabel": "明文 token",
+        "warnOnce": "关闭这个弹窗后，明文将永久丢失。",
+        "copiedToast": "已复制到剪贴板",
+        "copyFailed": "复制失败，请手动选择复制。",
+        "done": "已保存"
+      },
+      "table": {
+        "colName": "名称",
+        "colPrefix": "前缀",
+        "colScopes": "Scopes",
+        "colState": "状态",
+        "colLastUsed": "上次使用",
+        "colCreated": "创建于",
+        "revoke": "撤销",
+        "empty": "没有符合该条件的 API key。",
+        "loadFailed": "加载 API keys 失败。",
+        "revokedToast": "已撤销",
+        "revokeFailed": "撤销失败",
+        "confirmTitle": "确认撤销这个 API key？",
+        "confirmDescription": "「{name}」会立刻停止鉴权，现有调用会返回 401。此操作不可撤销。",
+        "confirmRevoke": "撤销",
+        "cancel": "取消",
+        "state": {
+          "all": "全部",
+          "active": "有效",
+          "revoked": "已撤销",
+          "expired": "已过期"
+        }
+      }
+    },
+    "agentRuns": {
+      "title": "Agent 调用",
+      "description": "所有 API key 鉴权调用的审计流水。每一行记录 action、input / output JSON、耗时与状态，便于排查 Agent 行为与发现滥用。",
+      "kpi": {
+        "ariaLabel": "Agent 调用关键指标",
+        "total": "总调用",
+        "failureRate": "失败率",
+        "failedCount": "{count, plural, =0 {0 失败} one {# 失败} other {# 失败}}",
+        "p95Latency": "p95 延迟",
+        "p50Hint": "p50 {ms}",
+        "activeKeys": "活跃 API key",
+        "windowHint": "当前时间窗",
+        "loadFailed": "加载汇总失败"
+      },
+      "filters": {
+        "ariaLabel": "Agent 调用过滤",
+        "actionLabel": "Action",
+        "actionPlaceholder": "如 tasks.* 或 errors.report",
+        "agentLabel": "Agent 名",
+        "agentPlaceholder": "按 Agent 过滤",
+        "statusLabel": "状态",
+        "anyStatus": "全部状态",
+        "status": {
+          "success": "成功",
+          "failed": "失败"
+        }
+      },
+      "table": {
+        "colWhen": "时间",
+        "colAgent": "Agent",
+        "colAction": "Action",
+        "colStatus": "状态",
+        "colDuration": "耗时",
+        "colApiKey": "API key",
+        "viewAction": "查看详情",
+        "empty": "该时间窗暂无 Agent 调用。",
+        "loadFailed": "加载 Agent 调用失败"
+      },
+      "detail": {
+        "title": "Agent 调用详情",
+        "close": "关闭",
+        "action": "Action",
+        "status": "状态",
+        "agent": "Agent",
+        "apiKey": "API key",
+        "duration": "耗时",
+        "when": "时间",
+        "id": "ID",
+        "input": "输入",
+        "output": "输出",
+        "loadFailed": "加载详情失败"
+      }
     }
   }
 }

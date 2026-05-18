@@ -2,15 +2,19 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  Bot,
   Bug,
   CircleDollarSign,
   Globe,
+  KeyRound,
+  ListChecks,
   type LucideIcon,
   PlugZap,
   Rocket,
   Settings,
   ServerCog,
   TrendingUp,
+  Webhook,
 } from 'lucide-react';
 
 /** i18n key under the `nav` namespace, e.g. `messages.nav.overview`. */
@@ -25,6 +29,10 @@ export type NavKey =
   | 'errors'
   | 'alerts'
   | 'integrations'
+  | 'agentRuns'
+  | 'tasks'
+  | 'webhooks'
+  | 'apiKeys'
   | 'settings';
 
 export type NavItem = {
@@ -55,5 +63,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/errors', key: 'errors', icon: Bug },
   { href: '/alerts', key: 'alerts', icon: AlertTriangle },
   { href: '/integrations', key: 'integrations', icon: PlugZap },
+  { href: '/agent-runs', key: 'agentRuns', icon: Bot },
+  { href: '/tasks', key: 'tasks', icon: ListChecks },
+  { href: '/webhooks', key: 'webhooks', icon: Webhook },
+  { href: '/settings/api-keys', key: 'apiKeys', icon: KeyRound },
   { href: '/settings', key: 'settings', icon: Settings },
 ];

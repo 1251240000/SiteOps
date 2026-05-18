@@ -2,7 +2,7 @@ import { errorTracking as errSvc } from '@siteops/services';
 import { AppError, listErrorsQuerySchema, reportErrorBodySchema } from '@siteops/shared';
 
 import { getDb } from '@/lib/db';
-import { ok, withAuth, withApiKey } from '@/lib/with-api';
+import { ok, withApiKeyAudited, withAuth } from '@/lib/with-api';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,8 +44,14 @@ export const GET = withAuth(
   { scopes: ['errors:read'] },
 );
 
-/** POST /api/v1/errors — receive error reports (API key, `errors:write`). */
-export const POST = withApiKey(
+/**
+ * POST /api/v1/errors — receive error reports (API key, `errors:write`).
+ *
+ * Audited via `withApiKeyAudited` — every call lands a row on `agent_runs`
+ * with `action='errors.report'`. Behavior is otherwise unchanged from the
+ * pre-T26 `withApiKey` version (same 201 envelope, same error mapping).
+ */
+export const POST = withApiKeyAudited(
   async (req, ctx) => {
     let body: unknown;
     try {
@@ -70,5 +76,5 @@ export const POST = withApiKey(
     }
     return ok(results, { status: 201, meta: { received: results.length } });
   },
-  { scopes: ['errors:write'] },
+  { action: 'errors.report', scopes: ['errors:write'] },
 );

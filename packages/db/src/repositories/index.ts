@@ -10,3 +10,7 @@ export * from './integration-credential-repo.js';
 export * from './metrics-repo.js';
 export * from './affiliate-entry-repo.js';
 export * from './site-cost-repo.js';
+export * from './task-repo.js';
+export * from './agent-run-repo.js';
+export * from './webhook-event-repo.js';
+export * from './api-key-repo.js';

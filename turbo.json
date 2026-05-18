@@ -24,6 +24,10 @@
       "dependsOn": ["^build"],
       "env": ["DATABASE_URL", "REDIS_URL", "AUTH_SECRET"]
     },
+    "i18n:check": {
+      "inputs": ["messages/**/*.json", "scripts/check-i18n-keys.mjs"],
+      "outputs": []
+    },
     "dev": {
       "cache": false,
       "persistent": true,

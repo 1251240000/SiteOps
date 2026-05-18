@@ -15,3 +15,6 @@ export * as metrics from './metrics/index.js';
 export * as revenue from './revenue/index.js';
 export * as roi from './roi/index.js';
 export * as integrations from './integrations/index.js';
+export * as tasks from './tasks/index.js';
+export * as agents from './agents/index.js';
+export * as webhooks from './webhooks/index.js';

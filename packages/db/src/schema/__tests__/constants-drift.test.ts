@@ -19,6 +19,9 @@ import {
 } from '../alerts.js';
 import { DEPLOYMENT_PROVIDERS, DEPLOYMENT_STATUS, DEPLOYMENT_TRIGGERS } from '../deployments.js';
 import { ERROR_LEVELS, ERROR_SOURCES } from '../errors.js';
+import { TASK_STATUS } from '../tasks.js';
+import { AGENT_RUN_STATUS } from '../agent-runs.js';
+import { WEBHOOK_PROVIDERS } from '../webhook-events.js';
 
 /**
  * `@siteops/shared/constants` is the canonical source of truth for these
@@ -50,6 +53,9 @@ describe('schema constants ↔ @siteops/shared/constants', () => {
     ['DEPLOYMENT_TRIGGERS', DEPLOYMENT_TRIGGERS, sharedConst.DEPLOYMENT_TRIGGERS],
     ['ERROR_SOURCES', ERROR_SOURCES, sharedConst.ERROR_SOURCES],
     ['ERROR_LEVELS', ERROR_LEVELS, sharedConst.ERROR_LEVELS],
+    ['TASK_STATUS', TASK_STATUS, sharedConst.TASK_STATUS],
+    ['AGENT_RUN_STATUS', AGENT_RUN_STATUS, sharedConst.AGENT_RUN_STATUS],
+    ['WEBHOOK_PROVIDERS', WEBHOOK_PROVIDERS, sharedConst.WEBHOOK_PROVIDERS],
   ];
 
   it.each(pairs)('%s matches between db schema and shared', (_name, dbArr, sharedArr) => {

@@ -3,3 +3,7 @@ export * from './audit.js';
 export * from './alert.js';
 export * from './deployments.js';
 export * from './errors.js';
+export * from './tasks.js';
+export * from './agent-runs.js';
+export * from './webhooks.js';
+export * from './api-keys.js';

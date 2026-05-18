@@ -146,6 +146,33 @@ export const siteRepo = {
     return rows[0] ?? null;
   },
 
+  /**
+   * Look up a site whose Cloudflare Pages project name matches exactly.
+   * Used by the T27 CF webhook dispatcher to attach the inbound delivery
+   * to the right `sites.id` row.
+   */
+  async findByCfPagesProject(db: Db, project: string): Promise<Site | null> {
+    if (!project) return null;
+    const rows = await db.select().from(sites).where(eq(sites.cfPagesProject, project)).limit(1);
+    return rows[0] ?? null;
+  },
+
+  /**
+   * Look up a site whose `repo_url` resolves to a given GitHub
+   * `owner/repo` pair (case-insensitive). T27 GitHub webhook dispatcher
+   * uses this when the payload only carries `repository.full_name`.
+   */
+  async findByGithubRepo(db: Db, ownerRepo: string): Promise<Site | null> {
+    if (!ownerRepo) return null;
+    // Sites store the repo as a free-form URL, e.g. `https://github.com/owner/repo`,
+    // `git@github.com:owner/repo.git`, or just `owner/repo`. An `ilike` on the
+    // canonical `owner/repo` substring is good enough; collisions across
+    // sites are not expected at our scale.
+    const needle = `%${ownerRepo}%`;
+    const rows = await db.select().from(sites).where(ilike(sites.repoUrl, needle)).limit(1);
+    return rows[0] ?? null;
+  },
+
   /** Slugs equal to `base` or shaped like `base-<n>`. Used by the slug picker. */
   async slugsLikeBase(db: Db, base: string): Promise<string[]> {
     const where = or(eq(sites.slug, base), ilike(sites.slug, `${base}-%`));

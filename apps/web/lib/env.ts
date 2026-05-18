@@ -20,6 +20,13 @@ const envSchema = z.object({
   AUTH_URL: z.string().url().optional(),
   /** Max successful credentials submissions per IP per minute. */
   LOGIN_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(5),
+  /**
+   * Max API requests per minute, per `api_keys.id`. Sliding 60s window
+   * implemented in Redis. Defaults to 600 (10 rps sustained), which matches
+   * what the M5 task-queue pull loop and Agent runners need.
+   * On Redis outage we fail *open* — same logic as login rate limit.
+   */
+  API_KEY_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(600),
 
   // ---- M3 integration credentials (all optional). Routes return a 400
   // ---- "not configured" envelope if the relevant vars are missing. ----
@@ -34,6 +41,12 @@ const envSchema = z.object({
   ADSENSE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
   ADSENSE_OAUTH_REDIRECT_URI: z.string().url().optional(),
   ADSENSE_ACCOUNT_NAME: z.string().min(1).optional(),
+
+  // ---- M5 webhook receivers (T27). Routes return 503 `webhook_not_configured`
+  // ---- when the relevant var is missing. Minimum 16 chars to discourage
+  // ---- "tooth" / "password123" tier secrets. ----
+  CF_WEBHOOK_SECRET: z.string().min(16).optional(),
+  GH_WEBHOOK_SECRET: z.string().min(16).optional(),
 });
 
 export type Env = z.infer<typeof envSchema> & { AUTH_SECRET: string };

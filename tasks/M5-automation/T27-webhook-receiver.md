@@ -4,7 +4,7 @@
 - **优先级**：P2
 - **前置依赖**：T17（Cloudflare service），T18（GitHub service）
 - **预估工时**：6h
-- **状态**：Todo
+- **状态**：Done
 
 ## 目标
 

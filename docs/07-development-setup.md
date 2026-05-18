@@ -87,7 +87,7 @@ detected` 警告。
 - VS Code：仓库内提供 `.vscode/launch.json`，可分别附加到 web（Next.js）与 worker。
 - DB：用 `pnpm db:studio` 或任意 PG 客户端（DBeaver/TablePlus）。
 - Redis：`docker exec -it siteops-redis redis-cli`。
-- BullMQ Board：dev 模式下 `apps/web` 暴露 `/admin/queues`（Bull-Board，仅 admin 可访问）。
+- BullMQ Board：尚未挂载。`/admin/*` 路径已在 `apps/web/lib/auth.config.ts` 的 `PROTECTED_PREFIXES` 中保留，将来 Bull-Board 在 `/admin/queues` 落地时会自动继承 admin session 校验，不会出现裸暴露的窗口。
 
 ## 6. 端口
 
@@ -107,8 +107,47 @@ rm -rf .turbo node_modules
 pnpm install
 ```
 
-## 8. 常见问题
+## 8. 本地接 Webhook（T27）
+
+CF Notification / GitHub webhook 都需要一个公网 URL。开发期最简单的办法是用 ngrok（或 cloudflared tunnel / tailscale funnel 都行）：
+
+```bash
+# 1. 起 web
+pnpm dev
+
+# 2. 另开终端，跑 ngrok
+ngrok http 3000
+
+# 3. 把 ngrok 给的 https URL 接到 provider:
+#    - GitHub Settings → Webhooks → Add webhook
+#      Payload URL: https://<id>.ngrok.app/api/v1/hooks/github
+#      Content type: application/json
+#      Secret:        与 .env 里的 GH_WEBHOOK_SECRET 一致
+#    - Cloudflare → Notifications → Webhooks → Create
+#      URL:    https://<id>.ngrok.app/api/v1/hooks/cloudflare
+#      Secret: 与 .env 里的 CF_WEBHOOK_SECRET 一致
+```
+
+要在本地手动测试一次签名 OK 的投递：
+
+```bash
+SECRET="$GH_WEBHOOK_SECRET"
+BODY='{"zen":"ping"}'
+SIG="sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | awk '{print $2}')"
+curl -X POST http://localhost:3000/api/v1/hooks/github \
+  -H "content-type: application/json" \
+  -H "x-hub-signature-256: $SIG" \
+  -H "x-github-delivery: dev-$(uuidgen)" \
+  -H "x-github-event: ping" \
+  -d "$BODY"
+# 预期 202 + { "data": { "id": "...", "duplicate": false } }
+```
+
+未配 `*_WEBHOOK_SECRET` 时路由会回 503 `webhook_not_configured`，便于 CI / dev 默认不暴露 webhook 端点。
+
+## 9. 常见问题
 
 - **Auth.js 重定向到 localhost:3000/api/auth/error**：检查 `AUTH_SECRET`、`NEXTAUTH_URL`（dev 自动推断，prod 必填）。
 - **drizzle-kit generate 没产物**：确认 schema 文件路径配在 `drizzle.config.ts`。
 - **Lighthouse 在 docker 里跑不起来**：dev 阶段建议本地直接跑 worker；生产用 `--no-sandbox` 或 sidecar 容器。
+- **webhook 一直收 401**：检查 secret 是否与 provider 端一致；CF 是 hex，GitHub 必须带 `sha256=` 前缀；body 不能被任何中间件压缩 / 改写（ngrok inspect 自带 raw body 视图）。

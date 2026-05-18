@@ -7,3 +7,7 @@ export * from './errors.js';
 export * from './alerts.js';
 export * from './revenue.js';
 export * from './site-costs.js';
+export * from './tasks.js';
+export * from './agent-runs.js';
+export * from './webhooks.js';
+export * from './api-keys.js';

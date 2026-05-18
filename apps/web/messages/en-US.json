@@ -112,6 +112,10 @@
     "errors": "Errors",
     "alerts": "Alerts",
     "integrations": "Integrations",
+    "agentRuns": "Agent runs",
+    "tasks": "Tasks",
+    "webhooks": "Webhooks",
+    "apiKeys": "API keys",
     "settings": "Settings",
     "sectionsAriaLabel": "Sections",
     "breadcrumbAriaLabel": "Breadcrumb"
@@ -147,14 +151,14 @@
       "domainsLabel": "Domains",
       "domainsHint": "0 expiring in 30 days",
       "deploymentsLabel": "Deployments (7d)",
-      "deploymentsHint": "Pending T10",
+      "deploymentsHint": "last 7 days",
       "openAlerts": "Open alerts",
-      "openAlertsHint": "Pending T16",
+      "openAlertsHint": "firing now",
       "recentActivity": "Recent activity",
       "recentActivityHint": "preview · mock data",
       "recentActivityAriaLabel": "Recent activity",
-      "emptyTitle": "Nothing else to show yet",
-      "emptyDescription": "Sparklines, error budgets, traffic & other cards arrive in M2.",
+      "emptyTitle": "More overview widgets coming soon",
+      "emptyDescription": "Per-site sparklines and an error-budget panel land in the next iteration. Use the side nav for traffic, revenue and agent runs.",
       "activity": {
         "colSite": "Site",
         "colEvent": "Event",
@@ -234,8 +238,8 @@
         "updatedToast": "Site “{name}” updated"
       },
       "detail": {
-        "emptyTitle": "More components arrive in M2",
-        "emptyDescription": "Uptime sparkline, recent audits, deployments timeline and error rates will land with their respective tasks.",
+        "emptyTitle": "More site components coming soon",
+        "emptyDescription": "Per-tab placeholders below are wired up; deeper widgets (per-site sparklines, anomaly cards) ship in a follow-up.",
         "tabsAriaLabel": "Site subpages",
         "tabOverview": "Overview",
         "tabTraffic": "Traffic",
@@ -835,7 +839,181 @@
       "themeValue": "Auto",
       "themeHint": "Pick light/dark from the top-right switcher.",
       "emptyTitle": "More settings coming soon",
-      "emptyDescription": "API key management lands together with T25 (Agent task queue) and the notification channels page is part of T16."
+      "emptyDescription": "Notification channels and per-rule routing land in a follow-up. API keys are managed under “API keys” in the side nav."
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "description": "Inbound webhook deliveries from Cloudflare Notifications and GitHub. Failed / signature-failed rows stay here for audit; admin can replay failures after fixing the downstream issue.",
+      "table": {
+        "providerFilter": "Provider",
+        "stateFilter": "State",
+        "signatureFilter": "Signature",
+        "colWhen": "When",
+        "colProvider": "Provider",
+        "colEvent": "Event",
+        "colDelivery": "Delivery id",
+        "colState": "State",
+        "colAttempts": "Attempts",
+        "replay": "Replay",
+        "badSig": "bad signature",
+        "empty": "No webhook deliveries match this filter.",
+        "loadFailed": "Failed to load webhook deliveries.",
+        "replayedToast": "Replayed successfully",
+        "replayFailedToast": "Replay finished but dispatch still failed — check the error column.",
+        "replayFailed": "Replay failed",
+        "providers": {
+          "all": "All providers",
+          "cloudflare": "Cloudflare",
+          "github": "GitHub"
+        },
+        "states": {
+          "all": "All states",
+          "processed": "Processed",
+          "failed": "Failed",
+          "pending": "Pending",
+          "bad-sig": "Bad signature"
+        },
+        "signature": {
+          "all": "Any signature",
+          "true": "Valid",
+          "false": "Invalid"
+        }
+      }
+    },
+    "tasks": {
+      "title": "Tasks",
+      "description": "Pull-mode task queue consumed by external Agents (T25). Use this view to triage failed/expired rows; admins can cancel queued / claimed tasks here.",
+      "kpi": {
+        "ariaLabel": "Task queue counts",
+        "queued": "Queued",
+        "claimed": "Claimed",
+        "failed": "Failed",
+        "succeeded": "Succeeded"
+      },
+      "table": {
+        "statusFilter": "Status",
+        "anyStatus": "Any status",
+        "kindFilter": "Kind",
+        "kindPlaceholder": "e.g. content.draft",
+        "siteFilter": "Site id",
+        "sitePlaceholder": "UUID",
+        "colKind": "Kind",
+        "colStatus": "Status",
+        "colAttempts": "Attempts",
+        "colPriority": "Priority",
+        "colAvailableAt": "Available",
+        "colCreated": "Created",
+        "actionCancel": "Cancel task",
+        "empty": "No tasks match this filter.",
+        "loadFailed": "Failed to load tasks.",
+        "cancelledToast": "Task cancelled",
+        "cancelFailed": "Cancel failed",
+        "cancelConfirmTitle": "Cancel this task?",
+        "cancelConfirmDescription": "“{kind}” will be terminally cancelled. Workers currently holding the lease will receive a conflict on their next heartbeat.",
+        "cancelDialog": "Keep task",
+        "confirmCancel": "Cancel task"
+      }
+    },
+    "apiKeys": {
+      "title": "API keys",
+      "description": "Bearer tokens used by external Agents and CI to call the API. Plaintext is shown only at creation time — store it in your secret manager.",
+      "create": {
+        "trigger": "Create key",
+        "title": "Create API key",
+        "description": "Pick scopes the agent needs and (optionally) an expiry. The plaintext token is shown only once.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. ci-deployer / content-agent",
+        "scopesLabel": "Scopes",
+        "scopesRequired": "Pick at least one scope.",
+        "expiresAtLabel": "Expires at",
+        "expiresAtHint": "Leave blank for never. Local time; converted to UTC on save.",
+        "submit": "Create",
+        "cancel": "Cancel",
+        "errorGeneric": "Failed to create API key.",
+        "issuedTitle": "Copy your new key",
+        "issuedDescription": "This is the only time we will show the plaintext. Closing this dialog forgets it.",
+        "plaintextLabel": "Plaintext token",
+        "warnOnce": "After you close this dialog, the plaintext is gone forever.",
+        "copiedToast": "Copied to clipboard",
+        "copyFailed": "Failed to copy — select & copy manually.",
+        "done": "I’ve stored it"
+      },
+      "table": {
+        "colName": "Name",
+        "colPrefix": "Prefix",
+        "colScopes": "Scopes",
+        "colState": "State",
+        "colLastUsed": "Last used",
+        "colCreated": "Created",
+        "revoke": "Revoke",
+        "empty": "No API keys match this filter.",
+        "loadFailed": "Failed to load API keys.",
+        "revokedToast": "Key revoked",
+        "revokeFailed": "Failed to revoke",
+        "confirmTitle": "Revoke this API key?",
+        "confirmDescription": "“{name}” will stop authenticating immediately. Existing requests with this token will return 401. This is not reversible.",
+        "confirmRevoke": "Revoke",
+        "cancel": "Cancel",
+        "state": {
+          "all": "All",
+          "active": "Active",
+          "revoked": "Revoked",
+          "expired": "Expired"
+        }
+      }
+    },
+    "agentRuns": {
+      "title": "Agent runs",
+      "description": "Audit log of every API-key authenticated call. Each row captures the action, input/output JSON, latency, and status — useful for debugging agents and spotting abuse.",
+      "kpi": {
+        "ariaLabel": "Agent runs key metrics",
+        "total": "Total calls",
+        "failureRate": "Failure rate",
+        "failedCount": "{count, plural, =0 {0 failed} one {# failed} other {# failed}}",
+        "p95Latency": "p95 latency",
+        "p50Hint": "p50 {ms}",
+        "activeKeys": "Active API keys",
+        "windowHint": "selected window",
+        "loadFailed": "Failed to load summary"
+      },
+      "filters": {
+        "ariaLabel": "Agent run filters",
+        "actionLabel": "Action",
+        "actionPlaceholder": "e.g. tasks.* or errors.report",
+        "agentLabel": "Agent name",
+        "agentPlaceholder": "Filter by agent",
+        "statusLabel": "Status",
+        "anyStatus": "Any status",
+        "status": {
+          "success": "Success",
+          "failed": "Failed"
+        }
+      },
+      "table": {
+        "colWhen": "When",
+        "colAgent": "Agent",
+        "colAction": "Action",
+        "colStatus": "Status",
+        "colDuration": "Duration",
+        "colApiKey": "API key",
+        "viewAction": "View details",
+        "empty": "No agent runs in this window.",
+        "loadFailed": "Failed to load agent runs"
+      },
+      "detail": {
+        "title": "Agent run detail",
+        "close": "Close",
+        "action": "Action",
+        "status": "Status",
+        "agent": "Agent",
+        "apiKey": "API key",
+        "duration": "Duration",
+        "when": "When",
+        "id": "ID",
+        "input": "Input",
+        "output": "Output",
+        "loadFailed": "Failed to load run"
+      }
     }
   }
 }

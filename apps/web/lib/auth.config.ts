@@ -19,10 +19,18 @@ const PROTECTED_PREFIXES = [
   '/errors',
   '/alerts',
   '/integrations',
+  '/agent-runs',
+  '/tasks',
+  '/webhooks',
   '/settings',
+  // `/admin/*` is reserved for future ops UIs (e.g. BullMQ Bull-Board mount).
+  // Listing it here means *any* future handler under that prefix inherits
+  // the admin-session redirect — no risk of accidentally mounting an
+  // un-authed dashboard.
+  '/admin',
 ];
 
-function isProtectedPath(pathname: string): boolean {
+export function isProtectedPath(pathname: string): boolean {
   if (pathname === '/') return true;
   return PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }

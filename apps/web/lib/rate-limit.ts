@@ -21,25 +21,28 @@ export type LoginRateLimitResult = {
   retryAfterSec: number;
 };
 
+export type ApiKeyRateLimitResult = LoginRateLimitResult;
+
 const WINDOW_SEC = 60;
 
-export async function checkLoginRateLimit(ip: string): Promise<LoginRateLimitResult> {
-  const env = getEnv();
-  const limit = env.LOGIN_RATE_LIMIT_PER_MIN;
-  const key = `login:rl:${ip || 'unknown'}`;
+/** Shared 60s sliding-window check. Fails open on Redis errors. */
+async function checkSlidingWindow(
+  redisKey: string,
+  limit: number,
+  ctx: Record<string, unknown>,
+): Promise<LoginRateLimitResult> {
   const log = getLogger();
-
   try {
     const redis = getRedis();
     if (redis.status === 'wait' || redis.status === 'end') {
       await redis.connect().catch(() => undefined);
     }
-    const count = await redis.incr(key);
+    const count = await redis.incr(redisKey);
     let ttl = WINDOW_SEC;
     if (count === 1) {
-      await redis.expire(key, WINDOW_SEC);
+      await redis.expire(redisKey, WINDOW_SEC);
     } else {
-      const t = await redis.ttl(key);
+      const t = await redis.ttl(redisKey);
       if (t > 0) ttl = t;
     }
     return {
@@ -50,9 +53,24 @@ export async function checkLoginRateLimit(ip: string): Promise<LoginRateLimitRes
     };
   } catch (err) {
     log.warn(
-      { err: { message: err instanceof Error ? err.message : String(err) }, ip },
+      { err: { message: err instanceof Error ? err.message : String(err) }, ...ctx },
       'rate-limit check failed; failing open',
     );
     return { allowed: true, count: 0, limit, retryAfterSec: 0 };
   }
+}
+
+export async function checkLoginRateLimit(ip: string): Promise<LoginRateLimitResult> {
+  const env = getEnv();
+  return checkSlidingWindow(`login:rl:${ip || 'unknown'}`, env.LOGIN_RATE_LIMIT_PER_MIN, { ip });
+}
+
+/**
+ * Per-API-key sliding window. Keyed on `api_keys.id` so revoking and
+ * re-issuing a key clears the budget; we don't key on plaintext (we don't
+ * have it past `withApiKey`) nor on caller IP (which Agents may share).
+ */
+export async function checkApiKeyRateLimit(apiKeyId: string): Promise<ApiKeyRateLimitResult> {
+  const env = getEnv();
+  return checkSlidingWindow(`apikey:rl:${apiKeyId}`, env.API_KEY_RATE_LIMIT_PER_MIN, { apiKeyId });
 }

@@ -4,6 +4,13 @@
  * tasks bounce back to `queued` (or terminate as `expired`).
  *
  * Retention windows match what's documented in `docs/03-data-model.md`.
+ *
+ * Shutdown integration (T32): the BullMQ processor wraps each pass in
+ * `shutdownState.track(...)` so the graceful-shutdown drain waits for the
+ * pass to finish even if BullMQ has already marked the job complete. We
+ * also short-circuit between phases if shutdown was signalled — the work
+ * already done is still safe to commit because every step is independent
+ * and idempotent.
  */
 import { Worker, type ConnectionOptions } from 'bullmq';
 
@@ -14,6 +21,7 @@ import { getWorkerDb } from '../db.js';
 import { getWorkerLogger } from '../logger.js';
 import { getQueueConnection } from '../queues.js';
 import type { WorkerConnectionConfig } from '../queues.js';
+import { shutdownState } from '../shutdown.js';
 
 const UPTIME_KEEP_DAYS = 90;
 const RESOLVED_ERRORS_KEEP_DAYS = 30;
@@ -62,10 +70,18 @@ export async function processHousekeeping(): Promise<HousekeepingResult> {
 
 export function startHousekeepingWorker(config: WorkerConnectionConfig): Worker {
   const logger = getWorkerLogger();
-  const worker = new Worker('housekeeping', processHousekeeping, {
-    connection: getQueueConnection(config) as unknown as ConnectionOptions,
-    concurrency: 1,
-  });
+  const worker = new Worker(
+    'housekeeping',
+    // Wrap in shutdownState.track so SIGTERM waits for the pass to settle
+    // even after BullMQ has handed control back. The Promise *returned* to
+    // BullMQ is the same one tracked, so its resolution still drives the
+    // job's completion state.
+    () => shutdownState.track(processHousekeeping()),
+    {
+      connection: getQueueConnection(config) as unknown as ConnectionOptions,
+      concurrency: 1,
+    },
+  );
   worker.on('failed', (job, err) => {
     logger.warn(
       { event: 'housekeeping.job_failed', jobId: job?.id, err: { message: err.message } },

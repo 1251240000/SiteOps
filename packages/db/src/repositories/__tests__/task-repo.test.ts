@@ -194,6 +194,32 @@ describe('taskRepo', () => {
       });
       expect(claim?.claimedBy).toBe(owner);
     });
+
+    /**
+     * T34 acceptance: the partial, ordered `tasks_claim_idx (priority DESC,
+     * available_at) WHERE status='queued'` must exist with that exact shape.
+     *
+     * Why a catalog check instead of an EXPLAIN assertion: at unit-test row
+     * counts the planner often picks `tasks_status_idx` (or even Seq Scan)
+     * because partial-index probing has overhead that doesn't pay off until
+     * the table has thousands of rows. Asserting the planner choice would be
+     * tightly coupled to PGlite's cost model. Inspecting `pg_indexes.indexdef`
+     * is deterministic and verifies the migration + schema sync did the job.
+     */
+    it('tasks_claim_idx is partial + ordered (priority DESC, available_at) WHERE status=queued', async () => {
+      const idx = await handle.pg.query<{ indexdef: string }>(
+        `SELECT indexdef FROM pg_indexes
+          WHERE schemaname='public' AND indexname='tasks_claim_idx'`,
+      );
+      expect(idx.rows).toHaveLength(1);
+      const def = idx.rows[0]?.indexdef ?? '';
+      // Column list, in order, with DESC on priority. `nullsLast()` on the
+      // schema column may add `NULLS LAST`; either form is acceptable as
+      // priority is NOT NULL in the table.
+      expect(def).toMatch(/priority DESC/);
+      expect(def).toMatch(/available_at(\s|,|\))/);
+      expect(def).toMatch(/WHERE \(?status = 'queued'::text\)?/);
+    });
   });
 
   describe('extendLease / complete / failTerminal', () => {
@@ -323,5 +349,116 @@ describe('taskRepo', () => {
       const fresh = await taskRepo.getById(handle.db as never, claim!.id);
       expect(fresh?.status).toBe('claimed');
     });
+
+    /**
+     * T34 — verifies the batched CTE rewrite handles a mixed pile of rows in
+     * one shot. Half the rows have attempts < max (should requeue) and half
+     * have attempts >= max (should expire); the previous N+1 implementation
+     * also handled this but required N round-trips. We assert that both
+     * branches are covered correctly when the same statement updates both.
+     */
+    it('handles a mixed batch (requeue + expire) in a single statement', async () => {
+      const past = new Date(Date.now() - 1_000);
+      const requeueCount = 7;
+      const expireCount = 5;
+      const requeueIds: string[] = [];
+      const expireIds: string[] = [];
+
+      for (let i = 0; i < requeueCount; i++) {
+        const t = await seedTask({
+          kind: 'content.draft',
+          status: 'claimed',
+          attempts: 1,
+          maxAttempts: 3,
+          claimToken: '11111111-1111-4111-8111-111111111111',
+          claimLeaseUntil: past,
+        });
+        requeueIds.push(t.id);
+      }
+      for (let i = 0; i < expireCount; i++) {
+        const t = await seedTask({
+          kind: 'content.draft',
+          status: 'claimed',
+          attempts: 3,
+          maxAttempts: 3,
+          claimToken: '22222222-2222-4222-8222-222222222222',
+          claimLeaseUntil: past,
+        });
+        expireIds.push(t.id);
+      }
+
+      const swept = await taskRepo.sweepExpiredLeases(handle.db as never);
+      expect(swept).toEqual({ requeued: requeueCount, expired: expireCount });
+
+      for (const id of requeueIds) {
+        const fresh = await taskRepo.getById(handle.db as never, id);
+        expect(fresh?.status).toBe('queued');
+        expect(fresh?.claimToken).toBeNull();
+        expect(fresh?.claimLeaseUntil).toBeNull();
+        // Backoff must push availableAt into the future (≥ 30s for attempts=1).
+        expect(fresh!.availableAt.getTime()).toBeGreaterThanOrEqual(Date.now() + 25_000);
+      }
+      for (const id of expireIds) {
+        const fresh = await taskRepo.getById(handle.db as never, id);
+        expect(fresh?.status).toBe('expired');
+        expect(fresh?.lastError).toBe('lease expired');
+        expect(fresh?.claimToken).toBeNull();
+        expect(fresh?.claimLeaseUntil).toBeNull();
+      }
+    });
+
+    /**
+     * T34 acceptance: the partial `tasks_lease_idx (claim_lease_until) WHERE
+     * status='claimed'` must exist with that exact shape. See the catalog-
+     * check rationale on `tasks_claim_idx` above; the same applies here.
+     */
+    it('tasks_lease_idx is partial (claim_lease_until) WHERE status=claimed', async () => {
+      const idx = await handle.pg.query<{ indexdef: string }>(
+        `SELECT indexdef FROM pg_indexes
+          WHERE schemaname='public' AND indexname='tasks_lease_idx'`,
+      );
+      expect(idx.rows).toHaveLength(1);
+      const def = idx.rows[0]?.indexdef ?? '';
+      expect(def).toMatch(/\(claim_lease_until\)/);
+      expect(def).toMatch(/WHERE \(?status = 'claimed'::text\)?/);
+    });
+
+    /**
+     * Backoff parity with `computeTaskBackoffMs`: the SQL formula
+     * `LEAST(MAX, BASE * 2^(GREATEST(attempts,1)-1))` must agree with the JS
+     * helper for representative attempt counts. A drift would silently change
+     * worker retry behavior, so this is locked in.
+     */
+    it.each([
+      [1, 30_000],
+      [2, 60_000],
+      [3, 120_000],
+      // attempts=8 → 30s * 2^7 = 3840s, capped at TASK_BACKOFF_MAX_MS = 3600s.
+      [8, 60 * 60 * 1000],
+    ])(
+      'requeue backoff for attempts=%i ≈ %ims (matches computeTaskBackoffMs)',
+      async (attempts, expectedBackoffMs) => {
+        const past = new Date(Date.now() - 1_000);
+        // max_attempts is checked BETWEEN 1 AND 10; pick the largest allowed
+        // value so attempts < max_attempts holds for every parameter row.
+        const t = await seedTask({
+          kind: 'content.draft',
+          status: 'claimed',
+          attempts,
+          maxAttempts: 10,
+          claimToken: '33333333-3333-4333-8333-333333333333',
+          claimLeaseUntil: past,
+        });
+        const sweepNow = new Date();
+        const swept = await taskRepo.sweepExpiredLeases(handle.db as never, sweepNow);
+        expect(swept).toEqual({ requeued: 1, expired: 0 });
+
+        const fresh = await taskRepo.getById(handle.db as never, t.id);
+        const delta = fresh!.availableAt.getTime() - sweepNow.getTime();
+        // Allow ±50ms for the round-trip between sweepNow and the SQL evaluation.
+        expect(delta).toBeGreaterThanOrEqual(expectedBackoffMs - 50);
+        expect(delta).toBeLessThanOrEqual(expectedBackoffMs + 50);
+      },
+    );
   });
 });

@@ -75,14 +75,21 @@ export const tasks = pgTable(
   },
   (t) => [
     /** Hot path: claimNext picks rows by (status='queued', available_at<=now())
-     *  ordered by priority DESC, available_at ASC. */
-    index('tasks_claim_idx').on(t.status, t.availableAt, t.priority),
+     *  ordered by priority DESC, available_at ASC. T34 made this a partial,
+     *  ordered index so the planner serves the ORDER BY without a Sort step
+     *  and skips index maintenance on terminal rows. */
+    index('tasks_claim_idx')
+      .on(t.priority.desc().nullsLast(), t.availableAt)
+      .where(sql`${t.status} = 'queued'`),
     /** Dashboard list filters. */
     index('tasks_kind_idx').on(t.kind),
     index('tasks_site_idx').on(t.siteId),
     index('tasks_status_idx').on(t.status),
-    /** Housekeeping scan: find claimed rows whose lease has expired. */
-    index('tasks_lease_idx').on(t.claimLeaseUntil),
+    /** Housekeeping scan: find claimed rows whose lease has expired. T34
+     *  partial — only the in-flight rows ever touch this index. */
+    index('tasks_lease_idx')
+      .on(t.claimLeaseUntil)
+      .where(sql`${t.status} = 'claimed'`),
     /** Idempotency: while a row is in flight (queued|claimed) the dedupe_key
      *  is unique. Terminal rows release the slot so the same key can re-enqueue
      *  after the previous instance settled. */

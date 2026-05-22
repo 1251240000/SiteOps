@@ -14,7 +14,9 @@
  * Sorting and filter semantics mirror `listAgentRunsQuerySchema` in
  * `@siteops/shared`.
  */
-import { and, asc, count, desc, eq, gte, ilike, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, ilike, lt, lte, or, sql, type SQL } from 'drizzle-orm';
+
+import { clampLimit, encodeCursor, type Cursor } from '@siteops/shared';
 
 import type { Db } from '../client.js';
 import {
@@ -38,8 +40,17 @@ export type AgentRunListFilters = {
 export type AgentRunListOptions = {
   filters?: AgentRunListFilters;
   sort?: '-created_at' | 'created_at';
+  /** Legacy 1-indexed page. Ignored when `cursor` is supplied. */
   page?: number;
+  /** Row cap; always clamped to `[1, 100]`. */
   limit?: number;
+  /**
+   * Decoded keyset cursor. When supplied, the repo switches to keyset mode:
+   * `total` is returned as `0` (uncomputed — saves the `count(*)` round trip)
+   * and `nextCursor` / `hasMore` describe the follow-up page. The route
+   * layer is responsible for decoding the wire string into a `Cursor`.
+   */
+  cursor?: Cursor;
 };
 
 export type AgentRunListItem = AgentRun & {
@@ -48,9 +59,15 @@ export type AgentRunListItem = AgentRun & {
 
 export type AgentRunListPage = {
   items: AgentRunListItem[];
+  /** Echoed back unchanged in offset mode; `1` in cursor mode (placeholder). */
   page: number;
   limit: number;
+  /** Filter-matched count. `0` in cursor mode — callers must not rely on it. */
   total: number;
+  /** Set in cursor mode (or `null` on the final page). */
+  nextCursor: string | null;
+  /** `true` iff a follow-up cursor was returned. Always `false` in offset mode. */
+  hasMore: boolean;
 };
 
 export type AgentRunSummary = {
@@ -96,12 +113,49 @@ export const agentRunRepo = {
   },
 
   async list(db: Db, opts: AgentRunListOptions = {}): Promise<AgentRunListPage> {
+    const limit = clampLimit(opts.limit, 50);
+    const filterWhere = buildWhere(opts.filters);
+    // The repo always sorts by `created_at` (asc/desc). The cursor path
+    // hard-codes DESC so the keyset comparison stays correct — ascending
+    // cursor mode is intentionally out of scope (no consumer uses it).
+    if (opts.cursor) {
+      const c = opts.cursor;
+      const cursorTs = new Date(c.ts);
+      const keysetWhere = or(
+        lt(agentRuns.createdAt, cursorTs),
+        and(eq(agentRuns.createdAt, cursorTs), lt(agentRuns.id, c.id)),
+      );
+      const where = filterWhere ? and(filterWhere, keysetWhere) : keysetWhere;
+
+      // Fetch one extra row to compute hasMore without a second round trip.
+      const rows = await db
+        .select({
+          run: agentRuns,
+          apiKeyId: apiKeys.id,
+          apiKeyName: apiKeys.name,
+        })
+        .from(agentRuns)
+        .leftJoin(apiKeys, eq(apiKeys.id, agentRuns.apiKeyId))
+        .where(where)
+        .orderBy(desc(agentRuns.createdAt), desc(agentRuns.id))
+        .limit(limit + 1);
+
+      const hasMore = rows.length > limit;
+      const sliced = hasMore ? rows.slice(0, limit) : rows;
+      const items: AgentRunListItem[] = sliced.map((r) => ({
+        ...r.run,
+        apiKey: r.apiKeyId && r.apiKeyName ? { id: r.apiKeyId, name: r.apiKeyName } : null,
+      }));
+      const last = items[items.length - 1];
+      const nextCursor =
+        hasMore && last ? encodeCursor({ id: last.id, ts: last.createdAt.toISOString() }) : null;
+      return { items, page: 1, limit, total: 0, nextCursor, hasMore };
+    }
+
     const page = Math.max(1, opts.page ?? 1);
-    const limit = Math.min(100, Math.max(1, opts.limit ?? 50));
     const offset = (page - 1) * limit;
-    const where = buildWhere(opts.filters);
-    const orderBy =
-      opts.sort === 'created_at' ? asc(agentRuns.createdAt) : desc(agentRuns.createdAt);
+    const sortDesc = opts.sort !== 'created_at';
+    const orderBy = sortDesc ? desc(agentRuns.createdAt) : asc(agentRuns.createdAt);
 
     const rows = await db
       .select({
@@ -111,7 +165,7 @@ export const agentRunRepo = {
       })
       .from(agentRuns)
       .leftJoin(apiKeys, eq(apiKeys.id, agentRuns.apiKeyId))
-      .where(where)
+      .where(filterWhere)
       .orderBy(orderBy)
       .limit(limit)
       .offset(offset);
@@ -121,9 +175,28 @@ export const agentRunRepo = {
       apiKey: r.apiKeyId && r.apiKeyName ? { id: r.apiKeyId, name: r.apiKeyName } : null,
     }));
 
-    const totalRow = await db.select({ c: count() }).from(agentRuns).where(where);
+    const totalRow = await db.select({ c: count() }).from(agentRuns).where(filterWhere);
+    const total = totalRow[0]?.c ?? 0;
 
-    return { items, page, limit, total: totalRow[0]?.c ?? 0 };
+    // In offset mode we also emit a forward cursor so callers can switch
+    // to keyset mode after page 1 without an awkward bootstrap. Only safe
+    // when the sort matches cursor semantics (DESC) — ASC walks fall back
+    // to `nextCursor=null`.
+    const hasMore = page * limit < total;
+    const last = items[items.length - 1];
+    const nextCursor =
+      sortDesc && hasMore && last
+        ? encodeCursor({ id: last.id, ts: last.createdAt.toISOString() })
+        : null;
+
+    return {
+      items,
+      page,
+      limit,
+      total,
+      nextCursor,
+      hasMore,
+    };
   },
 
   async getByIdWithKey(db: Db, id: string): Promise<AgentRunListItem | null> {

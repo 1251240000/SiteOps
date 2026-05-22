@@ -92,6 +92,48 @@ describe('apiKeyService.revoke', () => {
   });
 });
 
+describe('apiKeyService.updateRateLimit', () => {
+  it('sets the rate_limit_per_min on an active key', async () => {
+    const created = await apiKeyService.create(deps(), {
+      name: 'rl-target',
+      scopes: ['errors:write'],
+    });
+    expect(created.apiKey.rateLimitPerMin).toBeNull();
+
+    const updated = await apiKeyService.updateRateLimit(deps(), created.apiKey.id, 120);
+    expect(updated.rateLimitPerMin).toBe(120);
+  });
+
+  it('null clears an existing override', async () => {
+    const created = await apiKeyService.create(deps(), {
+      name: 'rl-clear',
+      scopes: ['errors:write'],
+      rateLimitPerMin: 60,
+    });
+    expect(created.apiKey.rateLimitPerMin).toBe(60);
+
+    const cleared = await apiKeyService.updateRateLimit(deps(), created.apiKey.id, null);
+    expect(cleared.rateLimitPerMin).toBeNull();
+  });
+
+  it('throws not_found on unknown id', async () => {
+    await expect(
+      apiKeyService.updateRateLimit(deps(), '00000000-0000-4000-8000-000000000000', 60),
+    ).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('refuses to update revoked rows (404 surface)', async () => {
+    const created = await apiKeyService.create(deps(), {
+      name: 'rl-revoked',
+      scopes: ['errors:write'],
+    });
+    await apiKeyService.revoke(deps(), created.apiKey.id);
+    await expect(
+      apiKeyService.updateRateLimit(deps(), created.apiKey.id, 60),
+    ).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
+
 describe('apiKeyService.list', () => {
   it('hides revoked rows when state="active"', async () => {
     const a = await apiKeyService.create(deps(), {

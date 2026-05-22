@@ -22,6 +22,8 @@ import {
   type ApiKeyScope,
 } from '@siteops/shared';
 
+import { apiKeyCache } from './api-key-cache.js';
+
 export type { ApiKeyListPage, ApiKeyView };
 
 export type ApiKeyServiceDeps = {
@@ -37,6 +39,11 @@ export type CreateApiKeyServiceInput = {
   scopes: Array<ApiKeyScope | typeof API_KEY_WILDCARD>;
   /** ISO datetime, or `undefined` for never-expires. Caller pre-validates. */
   expiresAt?: string;
+  /**
+   * Optional per-key override of the global `API_KEY_RATE_LIMIT_PER_MIN`.
+   * `undefined` (or absent) → use the env default.
+   */
+  rateLimitPerMin?: number;
 };
 
 export type CreateApiKeyResult = {
@@ -91,6 +98,7 @@ export const apiKeyService = {
       keyPrefix: generated.prefix,
       scopes: scopes as string[],
       ...(input.expiresAt ? { expiresAt: new Date(input.expiresAt) } : {}),
+      ...(input.rateLimitPerMin !== undefined ? { rateLimitPerMin: input.rateLimitPerMin } : {}),
     });
     deps.logger?.info(
       {
@@ -98,6 +106,7 @@ export const apiKeyService = {
         apiKeyId: created.id,
         scopes,
         expiresAt: created.expiresAt,
+        rateLimitPerMin: created.rateLimitPerMin,
       },
       'api key issued',
     );
@@ -107,6 +116,10 @@ export const apiKeyService = {
   /**
    * Idempotent — revoking an already-revoked key returns the same row
    * without re-stamping `revoked_at`. 404s when the id is unknown.
+   *
+   * Also evicts any in-process cache entries (T30) so the revoked key
+   * stops being accepted on this replica immediately, rather than waiting
+   * out the cache's 60 s TTL.
    */
   async revoke(deps: ApiKeyServiceDeps, id: string): Promise<ApiKeyView> {
     const row = await apiKeyRepo.revoke(deps.db, id);
@@ -117,7 +130,48 @@ export const apiKeyService = {
         details: { id },
       });
     }
-    deps.logger?.info({ event: 'api_key.revoked', apiKeyId: row.id }, 'api key revoked');
+    const evicted = apiKeyCache.invalidateById(row.id);
+    deps.logger?.info(
+      { event: 'api_key.revoked', apiKeyId: row.id, cacheEvictions: evicted },
+      'api key revoked',
+    );
+    return row;
+  },
+
+  /**
+   * Update the per-key `rate_limit_per_min` override (T38).
+   *
+   * Pass `null` to clear the override and let the key fall back to the
+   * global env default. `undefined` is rejected at the schema layer; here
+   * we only see `number | null`. Refuses to mutate revoked rows (404).
+   *
+   * Invalidates the in-process API-key cache so the new limit takes effect
+   * on this replica immediately — otherwise the cache would keep serving
+   * the old `rateLimitPerMin` until its 60 s TTL expired.
+   */
+  async updateRateLimit(
+    deps: ApiKeyServiceDeps,
+    id: string,
+    rateLimitPerMin: number | null,
+  ): Promise<ApiKeyView> {
+    const row = await apiKeyRepo.updateRateLimit(deps.db, id, rateLimitPerMin);
+    if (!row) {
+      throw new AppError('API key not found', {
+        code: 'not_found',
+        status: 404,
+        details: { id },
+      });
+    }
+    const evicted = apiKeyCache.invalidateById(row.id);
+    deps.logger?.info(
+      {
+        event: 'api_key.rate_limit_updated',
+        apiKeyId: row.id,
+        rateLimitPerMin,
+        cacheEvictions: evicted,
+      },
+      'api key rate limit updated',
+    );
     return row;
   },
 };

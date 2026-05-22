@@ -17,7 +17,6 @@
 #      Caddy uses an internal self-signed cert (`tls internal`).
 #
 # Both blocks share the same upstream snippet via `import siteops_upstream`.
-
 {
 	admin 127.0.0.1:2019
 	email {$CADDY_ACME_EMAIL:admin@example.com}
@@ -27,14 +26,39 @@
 (siteops_upstream) {
 	encode zstd gzip
 
+	# T33 — security response headers at the edge. Mirrored by
+	# `apps/web/middleware.ts` for defense in depth, with two key
+	# differences:
+	#   * HSTS lives only here — it's TLS-only by spec; setting it inside
+	#     the app would be meaningless behind plain-HTTP proxies (and
+	#     browsers ignore it on http:// anyway).
+	#   * `Server` is stripped to avoid leaking the Caddy version to clients.
+	# CSP is intentionally NOT set here — it's owned by the Next middleware
+	# so dev/prod toggling (`Content-Security-Policy-Report-Only` in dev)
+	# stays in one place.
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
 	handle /caddy-healthz {
 		respond "ok" 200
 	}
 
+	# Upstream health probe uses /readyz (T29): it returns 503 when the web
+	# process can no longer reach Postgres or Redis, so Caddy takes the
+	# upstream out of rotation instead of forwarding 5xx to clients. Docker's
+	# container-level HEALTHCHECK still hits /healthz (liveness only) so a
+	# transient dependency outage doesn't trigger a restart loop.
 	reverse_proxy web:3000 {
-		health_uri      /healthz
+		health_uri /readyz
 		health_interval 10s
-		health_timeout  3s
+		health_timeout 3s
+		health_status 2xx
 	}
 
 	log {

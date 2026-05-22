@@ -6,8 +6,14 @@
  * `start*` helper is idempotent — calling it twice within the same process
  * is a programmer error but won't corrupt Redis state.
  *
- * Graceful shutdown: on SIGTERM/SIGINT we close every Worker (which lets in-
- * flight jobs finish), then close the queues + Redis connection.
+ * Graceful shutdown (T32): on SIGTERM/SIGINT we
+ *   1. flip `shutdownState` so any long-running processor can short-circuit,
+ *   2. await every BullMQ `Worker.close()` (which lets the current job
+ *      finish naturally),
+ *   3. drain any extra promises tracked via `shutdownState.track()` up to
+ *      `WORKER_SHUTDOWN_TIMEOUT_MS` (default 30s),
+ *   4. close queues + Redis, log `worker.exit`, then `process.exit(0)`.
+ * A second SIGTERM mid-drain is no-oped to avoid cascading exits.
  */
 import type { Worker } from 'bullmq';
 
@@ -17,6 +23,7 @@ import { getWorkerEnv } from './env.js';
 import { getWorkerLogger } from './logger.js';
 import { ALL_QUEUES, closeQueues } from './queues.js';
 import type { WorkerConnectionConfig } from './queues.js';
+import { shutdownState } from './shutdown.js';
 import { startAlertFireWorker } from './jobs/alert-fire.js';
 import { startHousekeepingWorker } from './jobs/housekeeping.js';
 import { startLighthouseWorker } from './jobs/lighthouse-run.js';
@@ -101,11 +108,42 @@ async function main(): Promise<void> {
   logger.info({ event: 'worker.ready' }, 'siteops worker ready');
 }
 
+let shutdownStarted = false;
+
 async function shutdown(signal: string): Promise<void> {
+  if (shutdownStarted) return;
+  shutdownStarted = true;
   const logger = getWorkerLogger();
-  logger.info({ event: 'worker.shutdown', signal }, 'shutting down');
+  const env = getWorkerEnv();
+  shutdownState.signal();
+  logger.info(
+    { event: 'worker.shutdown_start', signal, inFlight: shutdownState.metrics().inFlight },
+    'draining',
+  );
+  // Step 1: BullMQ workers — `.close()` resolves only after the in-flight
+  // job (if any) has finished or BullMQ's own timeout has elapsed.
   await Promise.allSettled(workers.map((w) => w.close()));
+  // Step 2: extra tracked promises (sweeps / fan-outs that aren't bound to
+  // a single BullMQ job). Bounded by env so a wedged operation can't pin
+  // the container forever.
+  const drainStartedMs = Date.now();
+  await shutdownState.drain(env.WORKER_SHUTDOWN_TIMEOUT_MS);
+  const drainElapsed = Date.now() - drainStartedMs;
+  const remaining = shutdownState.metrics().inFlight;
+  if (remaining > 0) {
+    logger.warn(
+      {
+        event: 'worker.shutdown_timeout',
+        signal,
+        remaining,
+        drainTimeoutMs: env.WORKER_SHUTDOWN_TIMEOUT_MS,
+        drainElapsedMs: drainElapsed,
+      },
+      'drain timeout — exiting with tracked promises still pending',
+    );
+  }
   await closeQueues();
+  logger.info({ event: 'worker.exit', signal, drainElapsedMs: drainElapsed }, 'goodbye');
   process.exit(0);
 }
 

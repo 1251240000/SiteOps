@@ -1,5 +1,5 @@
 /**
- * Edge-runtime middleware combining two responsibilities:
+ * Edge-runtime middleware combining three responsibilities:
  *
  *   1. Gate `/(dashboard)` routes behind a valid session cookie. The rule
  *      lives in `authConfig.callbacks.authorized`; if it returns false /
@@ -8,6 +8,9 @@
  *      config (`lib/i18n/request.ts`) can pick a catalog deterministically
  *      on the very first paint. We never overwrite an existing cookie —
  *      explicit user choice via the locale switcher is sticky.
+ *   3. Inject the dashboard's security response headers (T33). Caddy adds
+ *      the same set plus HSTS at the edge; running them here too keeps
+ *      `pnpm dev` and any non-Caddy proxy deployments protected.
  *
  * IMPORTANT: this file may only import the edge-safe Auth config — it must
  * NOT pull in `lib/auth.ts` (which imports the postgres driver and bcrypt).
@@ -18,8 +21,11 @@ import { NextResponse } from 'next/server';
 import { authConfig } from './lib/auth.config';
 import { LOCALE_COOKIE } from './lib/i18n/locales';
 import { pickLocale } from './lib/i18n/pick-locale';
+import { applySecurityHeaders } from './lib/security-headers';
 
 const { auth } = NextAuth(authConfig);
+
+const isProd = process.env.NODE_ENV === 'production';
 
 export default auth((req) => {
   const res = NextResponse.next();
@@ -34,11 +40,15 @@ export default auth((req) => {
       maxAge: 60 * 60 * 24 * 365,
     });
   }
+  applySecurityHeaders(res.headers, { isProd });
   return res;
 });
 
 export const config = {
-  // Skip everything Auth.js owns, static assets, and the public-API surface
-  // (which has its own session/API-key checks via `withApi` / `withApiKey`).
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|healthz|login).*)'],
+  // Skip API (own auth + JSON, no CSP needed), Next static + image
+  // pipelines (immutable + cache-friendly; CSP would be redundant noise),
+  // favicon, and the liveness probe `/healthz`. `/login` IS matched so it
+  // gets the same security envelope as the dashboard; the page component
+  // itself bounces logged-in users away.
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|healthz).*)'],
 };

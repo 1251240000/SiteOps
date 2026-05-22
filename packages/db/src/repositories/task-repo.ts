@@ -22,9 +22,9 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { and, asc, desc, eq, ilike, inArray, isNotNull, lte, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 
-import { computeTaskBackoffMs } from '@siteops/shared';
+import { TASK_BACKOFF_BASE_MS, TASK_BACKOFF_MAX_MS, computeTaskBackoffMs } from '@siteops/shared';
 
 import type { Db } from '../client.js';
 import { tasks, type NewTask, type Task, type TaskStatus } from '../schema/tasks.js';
@@ -345,60 +345,70 @@ export const taskRepo = {
    *   - terminate as `expired` (finished_at = now, last_error = "lease expired")
    *     when `attempts >= max_attempts`.
    *
-   * Returns the count of rows modified in each branch. The implementation
-   * fetches candidates first then issues one UPDATE per row; this is N+1 in
-   * the worst case but `tasks_lease_idx` keeps the SELECT cheap and the
-   * housekeeping pass is rare. Doing the math in TS lets us share the
-   * backoff curve with `task-service` via `computeTaskBackoffMs`.
+   * Returns the count of rows modified in each branch.
+   *
+   * T34 rewrite: a single CTE with two batched UPDATE...RETURNING legs, one
+   * per branch, in one round-trip. The previous implementation did one
+   * SELECT + N UPDATEs (N+1) and started melting once the worker fell behind
+   * and a few thousand leases expired in a burst. The CTE version walks the
+   * partial `tasks_lease_idx` (status='claimed') exactly once and stamps every
+   * matching row in batch.
+   *
+   * The backoff curve mirrors `computeTaskBackoffMs` from `@siteops/shared`:
+   *   `LEAST(TASK_BACKOFF_MAX_MS, TASK_BACKOFF_BASE_MS * 2^(max(attempts,1)-1))`
+   * — using `GREATEST(attempts, 1)` so freshly-incremented `attempts=0` rows
+   * (which `claimNext` should never produce, but tests can seed) stay safe.
    */
   async sweepExpiredLeases(
     db: Db,
     now: Date = new Date(),
   ): Promise<{ requeued: number; expired: number }> {
-    const candidates = await db
-      .select({
-        id: tasks.id,
-        attempts: tasks.attempts,
-        maxAttempts: tasks.maxAttempts,
-      })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.status, 'claimed'),
-          isNotNull(tasks.claimLeaseUntil),
-          lte(tasks.claimLeaseUntil, now),
-        ),
-      );
-
-    let requeued = 0;
-    let expired = 0;
-    for (const c of candidates) {
-      if (c.attempts >= c.maxAttempts) {
-        await db
-          .update(tasks)
-          .set({
-            status: 'expired',
-            lastError: 'lease expired',
-            finishedAt: now,
-            claimToken: null,
-            claimLeaseUntil: null,
-          })
-          .where(eq(tasks.id, c.id));
-        expired += 1;
-      } else {
-        const backoffMs = computeTaskBackoffMs(c.attempts);
-        await db
-          .update(tasks)
-          .set({
-            status: 'queued',
-            availableAt: new Date(now.getTime() + backoffMs),
-            claimToken: null,
-            claimLeaseUntil: null,
-          })
-          .where(eq(tasks.id, c.id));
-        requeued += 1;
-      }
-    }
-    return { requeued, expired };
+    const baseSec = Math.round(TASK_BACKOFF_BASE_MS / 1000);
+    const maxSec = Math.round(TASK_BACKOFF_MAX_MS / 1000);
+    const result = await db.execute<{ expired_count: number; requeued_count: number }>(sql`
+      WITH expired AS (
+        UPDATE ${tasks}
+           SET status = 'expired',
+               last_error = 'lease expired',
+               finished_at = ${now},
+               claim_token = NULL,
+               claim_lease_until = NULL
+         WHERE status = 'claimed'
+           AND claim_lease_until IS NOT NULL
+           AND claim_lease_until <= ${now}
+           AND attempts >= max_attempts
+        RETURNING id
+      ), requeued AS (
+        UPDATE ${tasks}
+           SET status = 'queued',
+               available_at = ${now}::timestamptz + LEAST(
+                 make_interval(secs => ${maxSec}),
+                 make_interval(secs => ${baseSec}) * pow(2, GREATEST(attempts, 1) - 1)
+               ),
+               claim_token = NULL,
+               claim_lease_until = NULL
+         WHERE status = 'claimed'
+           AND claim_lease_until IS NOT NULL
+           AND claim_lease_until <= ${now}
+           AND attempts < max_attempts
+        RETURNING id
+      )
+      SELECT
+        (SELECT count(*)::int FROM expired)  AS expired_count,
+        (SELECT count(*)::int FROM requeued) AS requeued_count
+    `);
+    const rows =
+      (result as unknown as { rows: { expired_count: number; requeued_count: number }[] }).rows ??
+      (result as unknown as { expired_count: number; requeued_count: number }[]);
+    const row = Array.isArray(rows) ? rows[0] : undefined;
+    return {
+      expired: row?.expired_count ?? 0,
+      requeued: row?.requeued_count ?? 0,
+    };
   },
 };
+
+/** Re-exported so callers (services / workers) can verify backoff parity with
+ *  the SQL formula above. The repo intentionally does not call this anymore;
+ *  the sweep does the math in SQL to stay one round-trip. */
+export { computeTaskBackoffMs };

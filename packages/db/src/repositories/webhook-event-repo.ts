@@ -14,7 +14,9 @@
  *   - All mutating helpers (`markProcessed`, `markFailed`) are no-ops if
  *     the row id doesn't exist, so race-y replay paths don't blow up.
  */
-import { and, desc, eq, isNotNull, isNull, lte, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
+
+import { clampLimit, encodeCursor, type Cursor } from '@siteops/shared';
 
 import type { Db } from '../client.js';
 import {
@@ -37,15 +39,21 @@ export type WebhookEventListFilters = {
 
 export type WebhookEventListOptions = {
   filters?: WebhookEventListFilters;
+  /** Legacy 1-indexed page. Ignored when `cursor` is supplied. */
   page?: number;
   limit?: number;
+  /** Keyset cursor (decoded). See `agentRunRepo.list` for semantics. */
+  cursor?: Cursor;
 };
 
 export type WebhookEventListPage = {
   items: WebhookEvent[];
   page: number;
   limit: number;
+  /** `0` in cursor mode (uncomputed). */
   total: number;
+  nextCursor: string | null;
+  hasMore: boolean;
 };
 
 function buildWhere(filters: WebhookEventListFilters | undefined): SQL | undefined {
@@ -121,16 +129,41 @@ export const webhookEventRepo = {
   },
 
   async list(db: Db, opts: WebhookEventListOptions = {}): Promise<WebhookEventListPage> {
-    const page = Math.max(1, opts.page ?? 1);
-    const limit = Math.min(100, Math.max(1, opts.limit ?? 50));
-    const offset = (page - 1) * limit;
-    const where = buildWhere(opts.filters);
+    const limit = clampLimit(opts.limit, 50);
+    const filterWhere = buildWhere(opts.filters);
 
-    const items = where
+    if (opts.cursor) {
+      const c = opts.cursor;
+      const cursorTs = new Date(c.ts);
+      const keysetWhere = or(
+        lt(webhookEvents.createdAt, cursorTs),
+        and(eq(webhookEvents.createdAt, cursorTs), lt(webhookEvents.id, c.id)),
+      );
+      const where = filterWhere ? and(filterWhere, keysetWhere) : keysetWhere;
+
+      const rows = await db
+        .select()
+        .from(webhookEvents)
+        .where(where)
+        .orderBy(desc(webhookEvents.createdAt), desc(webhookEvents.id))
+        .limit(limit + 1);
+
+      const hasMore = rows.length > limit;
+      const items = hasMore ? rows.slice(0, limit) : rows;
+      const last = items[items.length - 1];
+      const nextCursor =
+        hasMore && last ? encodeCursor({ id: last.id, ts: last.createdAt.toISOString() }) : null;
+      return { items, page: 1, limit, total: 0, nextCursor, hasMore };
+    }
+
+    const page = Math.max(1, opts.page ?? 1);
+    const offset = (page - 1) * limit;
+
+    const items = filterWhere
       ? await db
           .select()
           .from(webhookEvents)
-          .where(where)
+          .where(filterWhere)
           .orderBy(desc(webhookEvents.createdAt))
           .limit(limit)
           .offset(offset)
@@ -141,15 +174,21 @@ export const webhookEventRepo = {
           .limit(limit)
           .offset(offset);
 
-    const totalRows = where
+    const totalRows = filterWhere
       ? await db
           .select({ count: sql<number>`count(*)::int` })
           .from(webhookEvents)
-          .where(where)
+          .where(filterWhere)
       : await db.select({ count: sql<number>`count(*)::int` }).from(webhookEvents);
     const total = totalRows[0]?.count ?? 0;
 
-    return { items, page, limit, total };
+    // Forward cursor for offset → keyset bootstrapping (always DESC here).
+    const hasMore = page * limit < total;
+    const last = items[items.length - 1];
+    const nextCursor =
+      hasMore && last ? encodeCursor({ id: last.id, ts: last.createdAt.toISOString() }) : null;
+
+    return { items, page, limit, total, nextCursor, hasMore };
   },
 
   /** Mark a row as successfully dispatched. No-op when id is missing. */

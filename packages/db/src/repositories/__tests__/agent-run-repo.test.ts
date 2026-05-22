@@ -170,6 +170,128 @@ describe('agentRunRepo', () => {
     });
   });
 
+  describe('cursor pagination', () => {
+    it('walks the full table without duplicates or gaps and stops with hasMore=false', async () => {
+      const keyId = await seedKey('cursor-walk');
+      const ids: string[] = [];
+      // Seed 11 rows so a limit=4 walk takes 3 pages (4+4+3) — including
+      // the final page where hasMore must flip to false.
+      for (let i = 0; i < 11; i++) {
+        const id = await seedRun({ apiKeyId: keyId, action: `op.${i}` });
+        ids.push(id);
+        // Force monotonically increasing createdAt so the keyset order is
+        // stable — without this, several rows can share the same ms.
+        await new Promise((r) => setTimeout(r, 3));
+      }
+
+      const seen: string[] = [];
+      let cursor: string | null | undefined;
+      let hasMore = true;
+      let pages = 0;
+      while (hasMore) {
+        pages += 1;
+        if (pages > 10) throw new Error('infinite loop guard');
+        const decoded = cursor
+          ? // Decode here to avoid pulling in another helper from app code.
+            JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
+          : undefined;
+        const page = await agentRunRepo.list(handle.db as never, {
+          limit: 4,
+          ...(decoded ? { cursor: decoded } : {}),
+        });
+        for (const row of page.items) seen.push(row.id);
+        hasMore = page.hasMore;
+        cursor = page.nextCursor;
+        if (!hasMore) expect(page.nextCursor).toBeNull();
+      }
+      expect(pages).toBe(3);
+      // Walked rows are the same set as the seeded ids, in newest-first order.
+      expect(seen).toEqual([...ids].reverse());
+      // No duplicates:
+      expect(new Set(seen).size).toBe(seen.length);
+    });
+
+    it('does not skip rows inserted at the head mid-walk', async () => {
+      const keyId = await seedKey('mid-walk');
+      const beforeIds: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        beforeIds.push(await seedRun({ apiKeyId: keyId, action: `before.${i}` }));
+        await new Promise((r) => setTimeout(r, 3));
+      }
+      // First page (newest 3).
+      const p1 = await agentRunRepo.list(handle.db as never, { limit: 3 });
+      expect(p1.items.map((r) => r.id)).toEqual([...beforeIds].slice(-3).reverse());
+      expect(p1.nextCursor).not.toBeNull();
+
+      // Insert a brand new row AFTER the first page boundary. It must
+      // NOT show up in the cursor follow-up — keyset semantics promise
+      // forward-only progress through rows that existed at start of walk.
+      await new Promise((r) => setTimeout(r, 3));
+      await seedRun({ apiKeyId: keyId, action: 'inserted.after' });
+
+      const decoded = JSON.parse(Buffer.from(p1.nextCursor!, 'base64url').toString('utf8'));
+      const p2 = await agentRunRepo.list(handle.db as never, { limit: 3, cursor: decoded });
+      // The follow-up MUST include only the older rows; never the new
+      // one (which has a strictly newer createdAt).
+      expect(p2.items.map((r) => r.action)).not.toContain('inserted.after');
+      expect(p2.items).toHaveLength(3);
+      expect(p2.hasMore).toBe(false);
+    });
+
+    it('returns empty page with hasMore=false when the cursor is past all rows', async () => {
+      const keyId = await seedKey('past-end');
+      await seedRun({ apiKeyId: keyId });
+      // Forge a cursor that is older than every row in the table.
+      const cursor = { id: '00000000-0000-0000-0000-000000000000', ts: '1970-01-01T00:00:00.000Z' };
+      const out = await agentRunRepo.list(handle.db as never, { limit: 5, cursor });
+      expect(out.items).toEqual([]);
+      expect(out.hasMore).toBe(false);
+      expect(out.nextCursor).toBeNull();
+    });
+
+    it('respects filters together with the keyset cursor', async () => {
+      const keyId = await seedKey('cursor-filtered');
+      // Mix successes and failures.
+      for (let i = 0; i < 4; i++) {
+        await seedRun({ apiKeyId: keyId, status: 'success' });
+        await new Promise((r) => setTimeout(r, 2));
+        await seedRun({ apiKeyId: keyId, status: 'failed' });
+        await new Promise((r) => setTimeout(r, 2));
+      }
+
+      const seen: string[] = [];
+      let cursor: string | null | undefined;
+      let hasMore = true;
+      while (hasMore) {
+        const decoded = cursor
+          ? JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
+          : undefined;
+        const page = await agentRunRepo.list(handle.db as never, {
+          limit: 2,
+          filters: { status: 'failed' },
+          ...(decoded ? { cursor: decoded } : {}),
+        });
+        for (const row of page.items) {
+          expect(row.status).toBe('failed');
+          seen.push(row.id);
+        }
+        hasMore = page.hasMore;
+        cursor = page.nextCursor;
+      }
+      expect(seen).toHaveLength(4);
+      expect(new Set(seen).size).toBe(4);
+    });
+
+    it('clamps limit to [1, 100] in cursor mode', async () => {
+      const keyId = await seedKey('clamp');
+      await seedRun({ apiKeyId: keyId });
+      const lo = await agentRunRepo.list(handle.db as never, { limit: 0 });
+      expect(lo.limit).toBe(1);
+      const hi = await agentRunRepo.list(handle.db as never, { limit: 9999 });
+      expect(hi.limit).toBe(100);
+    });
+  });
+
   describe('pruneOlderThan', () => {
     it('deletes rows older than the cutoff', async () => {
       const keyId = await seedKey('a');

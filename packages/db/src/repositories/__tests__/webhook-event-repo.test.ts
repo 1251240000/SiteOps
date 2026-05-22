@@ -175,6 +175,79 @@ describe('webhookEventRepo', () => {
     });
   });
 
+  describe('cursor pagination', () => {
+    it('walks all events forward with no duplicates or gaps', async () => {
+      const ids: string[] = [];
+      const now = Date.now();
+      for (let i = 0; i < 7; i++) {
+        ids.push(
+          await seedEvent({
+            deliveryId: `walk-${i}`,
+            createdAt: new Date(now - (7 - i) * 1000),
+          }),
+        );
+      }
+
+      const seen: string[] = [];
+      let cursor;
+      let hasMore = true;
+      let pages = 0;
+      while (hasMore) {
+        pages += 1;
+        if (pages > 5) throw new Error('infinite loop guard');
+        const page = await webhookEventRepo.list(handle.db as never, {
+          limit: 3,
+          ...(cursor ? { cursor } : {}),
+        });
+        for (const r of page.items) seen.push(r.id);
+        hasMore = page.hasMore;
+        cursor = page.nextCursor
+          ? (JSON.parse(Buffer.from(page.nextCursor, 'base64url').toString('utf8')) as {
+              id: string;
+              ts: string;
+            })
+          : undefined;
+      }
+      // 7 rows → 3+3+1 = 3 pages.
+      expect(pages).toBe(3);
+      expect(seen).toEqual([...ids].reverse());
+      expect(new Set(seen).size).toBe(seen.length);
+    });
+
+    it('combines filters with the cursor without drift', async () => {
+      const now = Date.now();
+      for (let i = 0; i < 6; i++) {
+        await seedEvent({
+          provider: i % 2 === 0 ? 'github' : 'cloudflare',
+          deliveryId: `mixed-${i}`,
+          createdAt: new Date(now - (6 - i) * 1000),
+        });
+      }
+      let cursor;
+      let hasMore = true;
+      const githubIds: string[] = [];
+      while (hasMore) {
+        const page = await webhookEventRepo.list(handle.db as never, {
+          limit: 2,
+          filters: { provider: 'github' },
+          ...(cursor ? { cursor } : {}),
+        });
+        for (const r of page.items) {
+          expect(r.provider).toBe('github');
+          githubIds.push(r.id);
+        }
+        hasMore = page.hasMore;
+        cursor = page.nextCursor
+          ? (JSON.parse(Buffer.from(page.nextCursor, 'base64url').toString('utf8')) as {
+              id: string;
+              ts: string;
+            })
+          : undefined;
+      }
+      expect(githubIds).toHaveLength(3);
+    });
+  });
+
   describe('pruneProcessedOlderThan', () => {
     it('removes processed rows past the cutoff and preserves signature-failed rows forever', async () => {
       const old = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

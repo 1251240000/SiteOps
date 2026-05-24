@@ -13,18 +13,30 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { agents as agentsSvc, auth as authService } from '@siteops/services';
-import { AppError, isAppError } from '@siteops/shared';
+import { AppError, can, isAppError, type UserRole } from '@siteops/shared';
 
 import { auth } from './auth';
 import { getDb } from './db';
+import {
+  assertValidIdempotencyKey,
+  buildReplayResponse,
+  checkIdempotency,
+  isIdempotentMethod,
+  type IdempotencyOutcome,
+} from './idempotency';
 import { getLogger, type Logger } from './logger';
-import { checkApiKeyRateLimit, type ApiKeyRateLimitResult } from './rate-limit';
+import {
+  checkApiKeyRateLimit,
+  type ApiKeyForRateLimit,
+  type ApiKeyRateLimitResult,
+} from './rate-limit';
 import { getOrCreateRequestId } from './request-id';
 
 export type AuthedUser = {
   id: string;
   email: string;
   name: string | null;
+  role: UserRole;
 };
 
 export type AuthedApiKey = {
@@ -90,15 +102,21 @@ function stampRateLimitHeaders(res: Response | NextResponse, rl: ApiKeyRateLimit
 /**
  * Enforce per-key sliding window. Returns the 429 response when over budget,
  * or the `ApiKeyRateLimitResult` for the caller to attach as headers.
+ *
+ * Takes the full `ApiKeyForRateLimit` (id + rateLimitPerMin) so the limiter
+ * can apply the per-key override (T38) without an extra DB round-trip.
  */
 async function enforceApiKeyRateLimit(
-  apiKeyId: string,
+  apiKey: ApiKeyForRateLimit,
   requestId: string,
   log: Logger,
 ): Promise<{ rl: ApiKeyRateLimitResult; denied?: NextResponse }> {
-  const rl = await checkApiKeyRateLimit(apiKeyId);
+  const rl = await checkApiKeyRateLimit(apiKey);
   if (!rl.allowed) {
-    log.warn({ apiKeyId, count: rl.count, limit: rl.limit }, 'api key rate limit exceeded');
+    log.warn(
+      { apiKeyId: apiKey.id, count: rl.count, limit: rl.limit },
+      'api key rate limit exceeded',
+    );
     const res = jsonError(
       429,
       'rate_limited',
@@ -123,6 +141,40 @@ function handleError(err: unknown, requestId: string, log: Logger): NextResponse
   return jsonError(500, 'internal_error', 'Internal server error', requestId);
 }
 
+/**
+ * Resolve the cache outcome for a write request that carries an
+ * `Idempotency-Key`. Reads the raw body off a `req.clone()` so the
+ * downstream handler still sees the original stream. Returns `null` when
+ * the header is absent or the method is read-only, signalling "no
+ * idempotency layer needed for this call".
+ */
+async function resolveIdempotency(
+  req: NextRequest,
+  principalKind: 'user' | 'api_key',
+  principalId: string,
+): Promise<IdempotencyOutcome | null> {
+  const idemHeader = req.headers.get('idempotency-key');
+  // `null` means the client sent no header → no idempotency layer.
+  // An explicit empty string IS treated as a malformed key (validation_failed).
+  if (idemHeader === null || !isIdempotentMethod(req.method)) return null;
+  assertValidIdempotencyKey(idemHeader);
+  const rawBody = await req.clone().text();
+  let pathname = '';
+  try {
+    pathname = new URL(req.url).pathname;
+  } catch {
+    pathname = '';
+  }
+  return checkIdempotency({
+    idempotencyKey: idemHeader,
+    method: req.method,
+    path: pathname,
+    rawBody,
+    principalKind,
+    principalId,
+  });
+}
+
 function bindLogger(req: NextRequest, requestId: string): Logger {
   let pathname = '';
   try {
@@ -133,8 +185,37 @@ function bindLogger(req: NextRequest, requestId: string): Logger {
   return getLogger().child({ requestId, method: req.method, path: pathname });
 }
 
-/** Require a logged-in admin session. */
-export function withApi(handler: ApiHandler) {
+/**
+ * Public route wrapper — no authentication required.
+ *
+ * Reserved for endpoints that intentionally accept anonymous traffic, such
+ * as invitation acceptance (`/api/v1/users/invitations/accept`) where the
+ * caller is gated by a single-use token in the body. Provides the same
+ * request-id / logger / error-envelope behaviour as the auth wrappers.
+ */
+export function withPublic(handler: ApiHandler) {
+  return async (req: NextRequest): Promise<Response> => {
+    const requestId = getOrCreateRequestId(req.headers);
+    const log = bindLogger(req, requestId);
+    try {
+      const ctx: ApiContext = { requestId, logger: log };
+      const res = await handler(req, ctx);
+      stampRequestId(res, requestId);
+      return res;
+    } catch (err) {
+      return handleError(err, requestId, log);
+    }
+  };
+}
+
+/** Options for `withApi` — optional role-permission gate (T40). */
+export type WithApiOptions = {
+  /** When set, the session user's role must satisfy this permission. */
+  permission?: string;
+};
+
+/** Require a logged-in user session (with optional role permission check). */
+export function withApi(handler: ApiHandler, options: WithApiOptions = {}) {
   return async (req: NextRequest): Promise<Response> => {
     const requestId = getOrCreateRequestId(req.headers);
     const log = bindLogger(req, requestId);
@@ -144,6 +225,16 @@ export function withApi(handler: ApiHandler) {
       if (!sUser?.id) {
         return jsonError(401, 'unauthorized', 'Authentication required', requestId);
       }
+      const role: UserRole = (sUser as { role?: UserRole }).role ?? 'admin';
+
+      if (options.permission && !can(role, options.permission)) {
+        log.info(
+          { userId: sUser.id, role, perm: options.permission },
+          'forbidden: insufficient role',
+        );
+        return jsonError(403, 'forbidden', 'Forbidden', requestId);
+      }
+
       const ctx: ApiContext = {
         requestId,
         logger: log,
@@ -151,15 +242,53 @@ export function withApi(handler: ApiHandler) {
           id: sUser.id,
           email: sUser.email ?? '',
           name: sUser.name ?? null,
+          role,
         },
       };
+      const idem = await resolveIdempotency(req, 'user', sUser.id);
+      if (idem?.kind === 'replay') {
+        const replay = buildReplayResponse(idem.stored);
+        stampRequestId(replay, requestId);
+        return replay;
+      }
       const res = await handler(req, ctx);
       stampRequestId(res, requestId);
+      if (idem?.kind === 'proceed') await idem.save(res);
       return res;
     } catch (err) {
       return handleError(err, requestId, log);
     }
   };
+}
+
+/**
+ * Sugar for session-only routes: `requirePermission('users.write', handler)`.
+ *
+ * Equivalent to `withApi(handler, { permission })`. API-key principals are
+ * not bound to the role matrix (they use scopes); use `withAuth` if a route
+ * should accept either.
+ */
+export function requirePermission(perm: string, handler: ApiHandler) {
+  return withApi(handler, { permission: perm });
+}
+
+/** Options for `withAuth` — combines API-key scopes with role permission. */
+export type WithAuthOptions = WithApiKeyOptions & {
+  /** When set, session-authenticated callers must have a role satisfying this permission. */
+  permission?: string;
+};
+
+/**
+ * Sugar for dual-auth routes: enforces a role permission for session callers,
+ * scopes for API-key callers. Equivalent to
+ * `withAuth(handler, { permission, scopes })`.
+ */
+export function withAuthPermission(
+  perm: string,
+  handler: ApiHandler,
+  options: WithAuthOptions = {},
+) {
+  return withAuth(handler, { ...options, permission: perm });
 }
 
 /** Require a valid `Authorization: Bearer <api-key>` header. */
@@ -187,7 +316,11 @@ export function withApiKey(handler: ApiHandler, options: WithApiKeyOptions = {})
         return jsonError(403, 'forbidden', 'Insufficient scope', requestId);
       }
 
-      const { rl, denied } = await enforceApiKeyRateLimit(key.id, requestId, log);
+      const { rl, denied } = await enforceApiKeyRateLimit(
+        { id: key.id, rateLimitPerMin: key.rateLimitPerMin },
+        requestId,
+        log,
+      );
       if (denied) return denied;
 
       const ctx: ApiContext = {
@@ -195,9 +328,17 @@ export function withApiKey(handler: ApiHandler, options: WithApiKeyOptions = {})
         logger: log,
         apiKey: { id: key.id, name: key.name, scopes: key.scopes },
       };
+      const idem = await resolveIdempotency(req, 'api_key', key.id);
+      if (idem?.kind === 'replay') {
+        const replay = buildReplayResponse(idem.stored);
+        stampRequestId(replay, requestId);
+        stampRateLimitHeaders(replay, rl);
+        return replay;
+      }
       const res = await handler(req, ctx);
       stampRequestId(res, requestId);
       stampRateLimitHeaders(res, rl);
+      if (idem?.kind === 'proceed') await idem.save(res);
       return res;
     } catch (err) {
       return handleError(err, requestId, log);
@@ -213,7 +354,7 @@ export function withApiKey(handler: ApiHandler, options: WithApiKeyOptions = {})
  * Order: try session first (free cookie read), fall back to API key. If a
  * key is presented but invalid we still return 401 (don't silently allow).
  */
-export function withAuth(handler: ApiHandler, options: WithApiKeyOptions = {}) {
+export function withAuth(handler: ApiHandler, options: WithAuthOptions = {}) {
   return async (req: NextRequest): Promise<Response> => {
     const requestId = getOrCreateRequestId(req.headers);
     const log = bindLogger(req, requestId);
@@ -221,6 +362,14 @@ export function withAuth(handler: ApiHandler, options: WithApiKeyOptions = {}) {
       const session = await auth();
       const sUser = session?.user;
       if (sUser?.id) {
+        const role: UserRole = (sUser as { role?: UserRole }).role ?? 'admin';
+        if (options.permission && !can(role, options.permission)) {
+          log.info(
+            { userId: sUser.id, role, perm: options.permission },
+            'forbidden: insufficient role',
+          );
+          return jsonError(403, 'forbidden', 'Forbidden', requestId);
+        }
         const ctx: ApiContext = {
           requestId,
           logger: log,
@@ -228,10 +377,18 @@ export function withAuth(handler: ApiHandler, options: WithApiKeyOptions = {}) {
             id: sUser.id,
             email: sUser.email ?? '',
             name: sUser.name ?? null,
+            role,
           },
         };
+        const idem = await resolveIdempotency(req, 'user', sUser.id);
+        if (idem?.kind === 'replay') {
+          const replay = buildReplayResponse(idem.stored);
+          stampRequestId(replay, requestId);
+          return replay;
+        }
         const res = await handler(req, ctx);
         stampRequestId(res, requestId);
+        if (idem?.kind === 'proceed') await idem.save(res);
         return res;
       }
 
@@ -251,16 +408,28 @@ export function withAuth(handler: ApiHandler, options: WithApiKeyOptions = {}) {
       if (!authService.checkScopes(key, options.scopes)) {
         return jsonError(403, 'forbidden', 'Insufficient scope', requestId);
       }
-      const { rl, denied } = await enforceApiKeyRateLimit(key.id, requestId, log);
+      const { rl, denied } = await enforceApiKeyRateLimit(
+        { id: key.id, rateLimitPerMin: key.rateLimitPerMin },
+        requestId,
+        log,
+      );
       if (denied) return denied;
       const ctx: ApiContext = {
         requestId,
         logger: log,
         apiKey: { id: key.id, name: key.name, scopes: key.scopes },
       };
+      const idem = await resolveIdempotency(req, 'api_key', key.id);
+      if (idem?.kind === 'replay') {
+        const replay = buildReplayResponse(idem.stored);
+        stampRequestId(replay, requestId);
+        stampRateLimitHeaders(replay, rl);
+        return replay;
+      }
       const res = await handler(req, ctx);
       stampRequestId(res, requestId);
       stampRateLimitHeaders(res, rl);
+      if (idem?.kind === 'proceed') await idem.save(res);
       return res;
     } catch (err) {
       return handleError(err, requestId, log);

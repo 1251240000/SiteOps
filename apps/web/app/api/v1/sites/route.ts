@@ -79,5 +79,5 @@ export const POST = withAuth(
     const site = await siteSvc.siteService.create({ db: getDb(), logger: ctx.logger }, parsed.data);
     return ok(site, { status: 201 });
   },
-  { scopes: ['sites:write'] },
+  { scopes: ['sites:write'], permission: 'sites.write' },
 );

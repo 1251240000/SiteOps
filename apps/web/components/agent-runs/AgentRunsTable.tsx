@@ -1,21 +1,24 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { Eye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { parseAsInteger, parseAsString, useQueryState } from 'nuqs';
+import { parseAsString, useQueryState } from 'nuqs';
 import { useMemo } from 'react';
 
 import { AgentRunDetailsDrawer } from '@/components/agent-runs/AgentRunDetailsDrawer';
+import { LoadMoreFooter } from '@/components/common/load-more-footer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api, type ApiError, type ApiSuccess } from '@/lib/api-client';
+import { api, type ApiError } from '@/lib/api-client';
+import { agentRunsKeys, type AgentRunListRow } from '@/lib/queries/agent-runs';
 import {
-  agentRunsKeys,
-  type AgentRunListRow,
-  type AgentRunsListMeta,
-} from '@/lib/queries/agent-runs';
+  flattenCursorPages,
+  getNextCursorParam,
+  INITIAL_CURSOR,
+  type CursorPage,
+} from '@/lib/queries/cursor';
 
 const PAGE_SIZE = 50;
 
@@ -41,24 +44,29 @@ function relativeTime(iso: string): string {
  *   - `status`          (read; written by `<AgentRunsFilters />`)
  *   - `action`          (read; written by `<AgentRunsFilters />`)
  *   - `agentName`       (read; written by `<AgentRunsFilters />`)
- *   - `page`            (read + written here)
  *   - `id`              (written when a row is clicked → opens the drawer)
+ *
+ * Pagination is keyset / cursor-based (T36) via `useInfiniteQuery`:
+ * the first request hits `/agent-runs` without `?cursor=`, the server
+ * returns the bootstrap `cursor.next`, and each "Load more" click pulls
+ * the next page using that opaque cursor. The legacy `?page=` URL state
+ * was removed because cursors are opaque and not stable across mutations.
  */
 export function AgentRunsTable() {
   const t = useTranslations('pages.agentRuns.table');
-  const tCommon = useTranslations('common');
 
   const [from] = useQueryState('from', parseAsString);
   const [to] = useQueryState('to', parseAsString);
   const [status] = useQueryState('status', parseAsString.withDefault(''));
   const [action] = useQueryState('action', parseAsString.withDefault(''));
   const [agentName] = useQueryState('agentName', parseAsString.withDefault(''));
-  const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
   const [selectedId, setSelectedId] = useQueryState('id', parseAsString);
 
-  const query = useMemo(() => {
+  // Filter-only query — `cursor` is appended per request inside `queryFn`.
+  // Excluding cursor from the cache key means a filter change resets the
+  // walk while `fetchNextPage()` re-uses the same key.
+  const filterQuery = useMemo(() => {
     const out: Record<string, string | number> = {
-      page,
       limit: PAGE_SIZE,
       sort: '-created_at',
     };
@@ -72,15 +80,23 @@ export function AgentRunsTable() {
     if (action) out['action'] = action;
     if (agentName) out['agentName'] = agentName;
     return out;
-  }, [from, to, status, action, agentName, page]);
+  }, [from, to, status, action, agentName]);
 
-  const { data, error, isLoading } = useQuery<ApiSuccess<AgentRunListRow[]>, ApiError>({
-    queryKey: agentRunsKeys.list(query),
-    queryFn: () => api.get<AgentRunListRow[]>('/agent-runs', { query }),
-  });
+  const { data, error, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useInfiniteQuery<CursorPage<AgentRunListRow>, ApiError>({
+      queryKey: agentRunsKeys.list(filterQuery),
+      initialPageParam: INITIAL_CURSOR,
+      queryFn: ({ pageParam }) =>
+        api.get<AgentRunListRow[]>('/agent-runs', {
+          query: {
+            ...filterQuery,
+            ...(typeof pageParam === 'string' && pageParam ? { cursor: pageParam } : {}),
+          },
+        }),
+      getNextPageParam: getNextCursorParam,
+    });
 
-  const items = data?.data ?? [];
-  const meta = data?.meta as AgentRunsListMeta | undefined;
+  const items = useMemo(() => flattenCursorPages<AgentRunListRow>(data), [data]);
 
   return (
     <div className="space-y-3">
@@ -176,44 +192,14 @@ export function AgentRunsTable() {
         </table>
       </div>
 
-      <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span>
-          {meta
-            ? tCommon('pagination.showing', {
-                from: items.length ? (meta.page - 1) * meta.limit + 1 : 0,
-                to: (meta.page - 1) * meta.limit + items.length,
-                total: meta.total,
-              })
-            : '\u00A0'}
-        </span>
-        <div className="flex items-center gap-2">
-          <span>
-            {tCommon.rich('pagination.page', {
-              strong: (chunks) => <strong>{chunks}</strong>,
-              page: meta?.page ?? page,
-              total: meta?.totalPages ?? 1,
-            })}
-          </span>
-          <Button
-            size="icon"
-            variant="outline"
-            disabled={!meta || meta.page <= 1}
-            onClick={() => setPage(Math.max(1, (meta?.page ?? page) - 1))}
-            aria-label={tCommon('pagination.previous')}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            disabled={!meta || meta.page >= (meta?.totalPages ?? 1)}
-            onClick={() => setPage((meta?.page ?? page) + 1)}
-            aria-label={tCommon('pagination.next')}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
+      <LoadMoreFooter
+        loadedCount={items.length}
+        hasMore={hasNextPage}
+        isFetchingMore={isFetchingNextPage}
+        onLoadMore={() => {
+          void fetchNextPage();
+        }}
+      />
 
       <AgentRunDetailsDrawer
         runId={selectedId}

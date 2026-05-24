@@ -109,6 +109,6 @@ export function POST(req: NextRequest, routeCtx: RouteContext) {
         status: 400,
       });
     },
-    { scopes: ['audits:write'] },
+    { scopes: ['audits:write'], permission: 'sites.write' },
   )(req);
 }

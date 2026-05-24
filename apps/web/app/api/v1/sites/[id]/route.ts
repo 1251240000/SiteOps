@@ -34,14 +34,14 @@ function bind(
   routeCtx: RouteContext,
   fn: (req: NextRequest, apiCtx: ApiContext, id: string) => Promise<Response> | Response,
   scope: string,
+  permission?: string,
 ) {
-  return withAuth(
-    async (req, apiCtx) => {
-      const id = await readId(routeCtx);
-      return fn(req, apiCtx, id);
-    },
-    { scopes: [scope] },
-  );
+  const opts: Parameters<typeof withAuth>[1] = { scopes: [scope] };
+  if (permission) opts.permission = permission;
+  return withAuth(async (req, apiCtx) => {
+    const id = await readId(routeCtx);
+    return fn(req, apiCtx, id);
+  }, opts);
 }
 
 export function GET(req: NextRequest, routeCtx: RouteContext) {
@@ -81,6 +81,7 @@ export function PATCH(req: NextRequest, routeCtx: RouteContext) {
       return ok(site);
     },
     'sites:write',
+    'sites.write',
   )(req);
 }
 
@@ -92,5 +93,6 @@ export function DELETE(req: NextRequest, routeCtx: RouteContext) {
       return ok(site);
     },
     'sites:write',
+    'sites.write',
   )(req);
 }

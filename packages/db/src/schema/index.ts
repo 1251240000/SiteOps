@@ -16,3 +16,4 @@ export * from './affiliate-entries.js';
 export * from './site-costs.js';
 export * from './tasks.js';
 export * from './webhook-events.js';
+export * from './user-invitations.js';

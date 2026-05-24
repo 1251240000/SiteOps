@@ -22,7 +22,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { api, type ApiError, type ApiSuccess } from '@/lib/api-client';
 import { apiKeysKeys, type CreateApiKeyResponse } from '@/lib/queries/api-keys';
-import { API_KEY_SCOPES, API_KEY_WILDCARD } from '@siteops/shared';
+// Narrow subpath import: the root barrel re-exports server-only utils
+// (e.g. `ssrf.ts` → `node:net`), which Turbopack can't tree-shake out of a
+// client bundle and surfaces as a build-error overlay site-wide.
+import { API_KEY_SCOPES, API_KEY_WILDCARD } from '@siteops/shared/constants';
 
 const ALL_SCOPES: string[] = [API_KEY_WILDCARD, ...API_KEY_SCOPES];
 
@@ -42,12 +45,15 @@ export function CreateApiKeyDialog() {
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState<string[]>(['errors:write']);
   const [expiresAt, setExpiresAt] = useState('');
+  // Empty string = "use env default"; otherwise must parse as a positive int.
+  const [rateLimitPerMin, setRateLimitPerMin] = useState('');
   const [issued, setIssued] = useState<CreateApiKeyResponse | null>(null);
 
   function reset(): void {
     setName('');
     setScopes(['errors:write']);
     setExpiresAt('');
+    setRateLimitPerMin('');
     setIssued(null);
   }
 
@@ -62,7 +68,7 @@ export function CreateApiKeyDialog() {
   const create = useMutation<
     ApiSuccess<CreateApiKeyResponse>,
     ApiError,
-    { name: string; scopes: string[]; expiresAt?: string }
+    { name: string; scopes: string[]; expiresAt?: string; rateLimitPerMin?: number }
   >({
     mutationFn: (input) => api.post<CreateApiKeyResponse>('/settings/api-keys', input),
     onSuccess: (res) => {
@@ -74,10 +80,19 @@ export function CreateApiKeyDialog() {
 
   function onSubmit(e: FormEvent<HTMLFormElement>): void {
     e.preventDefault();
+    // Only forward `rateLimitPerMin` if the admin actually typed a positive
+    // integer — otherwise the server uses the env default. We deliberately
+    // don't try to be clever about clamping; let the Zod layer reject bad
+    // values so the UI shows the same error a curl would.
+    const trimmed = rateLimitPerMin.trim();
+    const parsedRate = trimmed === '' ? undefined : Number(trimmed);
     create.mutate({
       name: name.trim(),
       scopes,
       ...(expiresAt ? { expiresAt: new Date(expiresAt).toISOString() } : {}),
+      ...(parsedRate !== undefined && Number.isFinite(parsedRate) && parsedRate > 0
+        ? { rateLimitPerMin: Math.floor(parsedRate) }
+        : {}),
     });
   }
 
@@ -182,6 +197,22 @@ export function CreateApiKeyDialog() {
                 onChange={(e) => setExpiresAt(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">{t('expiresAtHint')}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="api-key-rate-limit">{t('rateLimitLabel')}</Label>
+              <Input
+                id="api-key-rate-limit"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={100000}
+                step={1}
+                value={rateLimitPerMin}
+                onChange={(e) => setRateLimitPerMin(e.target.value)}
+                placeholder={t('rateLimitPlaceholder')}
+              />
+              <p className="text-xs text-muted-foreground">{t('rateLimitHint')}</p>
             </div>
 
             <AlertDialogFooter>

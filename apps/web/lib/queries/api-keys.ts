@@ -8,6 +8,11 @@ export type ApiKeyRow = {
   name: string;
   keyPrefix: string;
   scopes: string[];
+  /**
+   * Per-key override of the global `API_KEY_RATE_LIMIT_PER_MIN` (T38).
+   * `null` means the key uses the env default (typically 600/min).
+   */
+  rateLimitPerMin: number | null;
   lastUsedAt: string | null;
   expiresAt: string | null;
   revokedAt: string | null;

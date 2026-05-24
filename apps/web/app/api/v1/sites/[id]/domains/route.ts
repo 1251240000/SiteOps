@@ -68,6 +68,6 @@ export function POST(req: NextRequest, routeCtx: RouteContext) {
       );
       return ok(d, { status: 201 });
     },
-    { scopes: ['domains:write'] },
+    { scopes: ['domains:write'], permission: 'domains.write' },
   )(req);
 }

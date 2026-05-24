@@ -47,6 +47,36 @@ const envSchema = z.object({
   // ---- "tooth" / "password123" tier secrets. ----
   CF_WEBHOOK_SECRET: z.string().min(16).optional(),
   GH_WEBHOOK_SECRET: z.string().min(16).optional(),
+
+  // ---- M8/T38 system endpoints. `BOOTED_AT` is stamped by
+  // ---- `instrumentation.ts` on cold start; `GIT_SHA` is injected by the
+  // ---- release pipeline (`docker build --build-arg GIT_SHA=...`).
+  // ---- `npm_package_version` is set automatically by `pnpm/npm` scripts
+  // ---- so we don't validate it here.
+  BOOTED_AT: z.string().datetime().optional(),
+  GIT_SHA: z.string().min(1).optional(),
+
+  // ---- M8/T39 Bull-Board admin panel. Set to "false" in prod to disable
+  // ---- the `/admin/queues` panel entirely (returns 404).
+  ADMIN_QUEUES_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+
+  // ---- M10/T44 Email notifier. `disabled` (default) keeps the legacy
+  // ---- log-only behaviour so existing deployments don't suddenly start
+  // ---- sending; ops opts in by setting `EMAIL_PROVIDER=resend|smtp` plus
+  // ---- the corresponding credentials. Validation here is loose on
+  // ---- purpose — the transport factory raises a precise error on first
+  // ---- send if a required var is missing for the chosen provider.
+  EMAIL_PROVIDER: z.enum(['resend', 'smtp', 'disabled']).default('disabled'),
+  EMAIL_FROM: z.string().min(1).optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65_535).optional(),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASS: z.string().min(1).optional(),
+  SMTP_TLS: z.enum(['true', 'false']).optional(),
 });
 
 export type Env = z.infer<typeof envSchema> & { AUTH_SECRET: string };

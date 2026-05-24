@@ -15,6 +15,14 @@ import { defineConfig, devices } from '@playwright/test';
  * The `e2e` GitHub Actions workflow handles all three before invoking
  * `pnpm test:e2e`. Locally, run `pnpm dev:up && pnpm db:migrate && pnpm db:seed`
  * once before the first run.
+ *
+ * Projects:
+ *   - `chromium` — full suite, runs every spec under `e2e/`. Used by the
+ *     nightly `e2e.yml` workflow and any local `pnpm test:e2e` invocation.
+ *   - `smoke` — same browser, but `grep`-filtered to specs tagged `@smoke`.
+ *     Used by the per-PR `ci.yml` step `pnpm test:e2e:smoke` to keep the
+ *     blocking signal under five minutes (T50). Tag a spec by adding `@smoke`
+ *     to the test title, e.g. `test('@smoke admin can log in', ...)`.
  */
 
 const PORT = Number(process.env['PORT'] ?? 3100);
@@ -35,7 +43,16 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'smoke',
+      use: { ...devices['Desktop Chrome'] },
+      // Subset of `chromium` filtered to specs whose title contains `@smoke`.
+      // Run via `pnpm test:e2e:smoke` (--project=smoke).
+      grep: /@smoke/,
+    },
+  ],
   webServer: {
     command: `pnpm dev`,
     url: BASE_URL,

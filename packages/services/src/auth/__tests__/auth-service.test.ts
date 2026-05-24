@@ -60,7 +60,13 @@ describe('auth-service', () => {
         email: admin.email,
         password: admin.password,
       });
-      expect(user).toEqual({ id: admin.id, email: admin.email, name: 'Admin' });
+      // `role` defaults to 'admin' (per the schema column default).
+      expect(user).toEqual({
+        id: admin.id,
+        email: admin.email,
+        name: 'Admin',
+        role: 'admin',
+      });
     });
 
     it('is case-insensitive on email lookup', async () => {
@@ -105,7 +111,12 @@ describe('auth-service', () => {
     it('returns key view for a valid plaintext', async () => {
       const k = await seedKey({ scopes: ['sites:read'] });
       const view = await verifyApiKey(handle.db as never, k.plaintext);
-      expect(view).toEqual({ id: k.id, name: 'test-key', scopes: ['sites:read'] });
+      expect(view).toEqual({
+        id: k.id,
+        name: 'test-key',
+        scopes: ['sites:read'],
+        rateLimitPerMin: null,
+      });
     });
 
     it('stamps last_used_at on success (best-effort)', async () => {

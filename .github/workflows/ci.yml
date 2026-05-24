@@ -20,9 +20,11 @@ permissions:
 
 jobs:
   ci:
-    name: lint · typecheck · test · build
+    name: lint · typecheck · test · build · smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 25 min covers a cold cache: deps install (~2m) + lint/typecheck (~1m) +
+    # test:coverage (~3m) + build (~2m) + smoke (~3m). Hot cache lands < 8m.
+    timeout-minutes: 25
 
     # Postgres + Redis service containers wired up now so integration tests
     # added later (T11+) just need to read DATABASE_URL / REDIS_URL. Today's
@@ -62,6 +64,13 @@ jobs:
       AUTH_SECRET: ci-only-do-not-trust
       # Turbo telemetry is noise in CI logs.
       TURBO_TELEMETRY_DISABLED: '1'
+      # T50 — Playwright smoke test fixtures expect a seeded admin and pin
+      # the dashboard locale to en-US. Mirrors `e2e.yml` env exactly so
+      # specs work in both jobs without a local conditional.
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: ChangeMe123!
+      E2E_ADMIN_EMAIL: admin@example.com
+      E2E_ADMIN_PASSWORD: ChangeMe123!
 
     steps:
       - name: Checkout
@@ -106,21 +115,78 @@ jobs:
       - name: i18n catalog parity
         run: pnpm --filter @siteops/web i18n:check
 
-      - name: Test
-        run: pnpm test
+      - name: OpenAPI spec parity
+        run: pnpm --filter @siteops/web openapi:check
+
+      # T50 — `test:coverage` runs vitest with the v8 coverage provider in
+      # every workspace; thresholds live next to each `vitest.config.ts` and
+      # CI fails when any package drops below them.
+      - name: Test (with coverage)
+        run: pnpm test:coverage
 
       - name: Build
         run: pnpm build
 
-      # Upload coverage / vitest reports if any package produced them.
-      # `if-no-files-found: ignore` keeps this a no-op until a package opts in.
-      - name: Upload coverage reports (on failure)
-        if: failure()
+      # ------------------------------------------------------------------
+      # Playwright @smoke (T50)
+      #
+      # Runs the subset of `apps/web/e2e/*.spec.ts` whose titles include
+      # `@smoke` against a real Postgres + Redis. Designed to stay under 5
+      # minutes wall-clock so it's safe to gate on per-PR. The full
+      # Playwright suite still runs nightly via `e2e.yml`.
+      # ------------------------------------------------------------------
+      - name: Apply DB migrations
+        run: pnpm --filter @siteops/db db:migrate
+
+      - name: Seed admin user
+        run: pnpm --filter @siteops/db db:seed
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          # Keyed by lockfile so a Playwright bump pulls a fresh browser.
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @siteops/web exec playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        # `playwright install --with-deps` also installs apt packages; with
+        # a cache hit we still need those system libs, but we can skip the
+        # browser download.
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @siteops/web exec playwright install-deps chromium
+
+      - name: Run Playwright @smoke suite
+        run: pnpm --filter @siteops/web test:e2e:smoke
+
+      # ------------------------------------------------------------------
+      # Artifacts
+      # ------------------------------------------------------------------
+      # T50 — coverage report is always uploaded so reviewers can browse the
+      # HTML report in the run summary; `if-no-files-found: ignore` is just
+      # belt-and-suspenders in case a package skips coverage in the future.
+      - name: Upload coverage reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ github.run_id }}
           path: |
             **/coverage/**
             **/.vitest-reports/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Playwright report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-${{ github.run_id }}
+          path: |
+            **/playwright-report/**
+            **/test-results/**
           if-no-files-found: ignore
           retention-days: 7

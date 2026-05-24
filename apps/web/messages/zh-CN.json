@@ -17,6 +17,10 @@
       "next": "下一页",
       "page": "第 <strong>{page}</strong> / <strong>{total}</strong> 页",
       "showing": "显示 {from}–{to} 条 · 共 {total} 条",
+      "showingCount": "已加载 {count} 条",
+      "loadMore": "加载更多",
+      "loadingMore": "加载中…",
+      "endOfResults": "已到底",
       "noRows": "暂无数据"
     },
     "sortBy": "按 {column} 排序",
@@ -99,7 +103,22 @@
     "submitting": "登录中…",
     "errorInvalid": "邮箱或密码错误。",
     "errorGeneric": "登录失败，请稍后重试。",
-    "formAriaLabel": "登录表单"
+    "formAriaLabel": "登录表单",
+    "invite": {
+      "title": "接受邀请",
+      "description": "设置你的姓名和密码以完成账号创建。",
+      "name": "显示名",
+      "password": "密码",
+      "confirmPassword": "确认密码",
+      "submit": "创建账号",
+      "submitting": "正在创建…",
+      "errorPasswordShort": "密码至少 8 位。",
+      "errorPasswordMismatch": "两次输入的密码不一致。",
+      "errorInvalidToken": "邀请链接无效或已过期，请联系邀请你的管理员重新发送。",
+      "errorEmailExists": "该邮箱已存在账号，请直接登录。",
+      "errorGeneric": "无法接受邀请，请稍后重试。",
+      "formAriaLabel": "接受邀请表单"
+    }
   },
   "nav": {
     "overview": "概览",
@@ -116,6 +135,7 @@
     "tasks": "任务队列",
     "webhooks": "Webhook 接收",
     "apiKeys": "API keys",
+    "users": "团队",
     "settings": "设置",
     "sectionsAriaLabel": "导航",
     "breadcrumbAriaLabel": "面包屑"
@@ -927,6 +947,9 @@
         "scopesRequired": "请至少选一个 scope。",
         "expiresAtLabel": "过期时间",
         "expiresAtHint": "留空表示永不过期。本地时间，保存时转为 UTC。",
+        "rateLimitLabel": "限流（每分钟）",
+        "rateLimitPlaceholder": "如 60（留空使用默认值）",
+        "rateLimitHint": "可选，覆盖全局默认。留空即使用默认。",
         "submit": "创建",
         "cancel": "取消",
         "errorGeneric": "创建 API key 失败。",
@@ -942,10 +965,24 @@
         "colName": "名称",
         "colPrefix": "前缀",
         "colScopes": "Scopes",
+        "colRateLimit": "限流",
         "colState": "状态",
         "colLastUsed": "上次使用",
         "colCreated": "创建于",
+        "actionsAriaLabel": "行操作",
         "revoke": "撤销",
+        "editRateLimit": "编辑限流",
+        "rateLimitDefault": "默认",
+        "rateLimitValue": "{value}/分钟",
+        "rateLimitUpdatedToast": "限流已更新",
+        "rateLimitUpdateFailed": "限流更新失败",
+        "rateLimitInvalid": "限流必须是正整数。",
+        "editRateLimitTitle": "编辑限流",
+        "editRateLimitDescription": "调整「{name}」的每分钟调用上限。留空则恢复全局默认。",
+        "editRateLimitLabel": "限流（每分钟）",
+        "editRateLimitPlaceholder": "如 60",
+        "editRateLimitHint": "留空将清除该 key 的覆盖，回退到环境默认。",
+        "editRateLimitSubmit": "保存",
         "empty": "没有符合该条件的 API key。",
         "loadFailed": "加载 API keys 失败。",
         "revokedToast": "已撤销",
@@ -960,6 +997,75 @@
           "revoked": "已撤销",
           "expired": "已过期"
         }
+      }
+    },
+    "users": {
+      "title": "团队成员",
+      "description": "邀请团队成员并管理他们的角色。admin 拥有完全权限；operator 可读写大多数资源，但不能管理团队和 API keys；viewer 仅可读。",
+      "roles": {
+        "admin": "管理员",
+        "operator": "运营",
+        "viewer": "只读"
+      },
+      "statuses": {
+        "active": "正常",
+        "suspended": "已停用"
+      },
+      "table": {
+        "colEmail": "邮箱",
+        "colName": "姓名",
+        "colRole": "角色",
+        "colStatus": "状态",
+        "colLastLogin": "最近登录",
+        "colCreated": "创建时间",
+        "actionsAriaLabel": "操作",
+        "editRole": "修改角色",
+        "suspend": "停用",
+        "reactivate": "重新启用",
+        "editRoleTitle": "修改角色",
+        "editRoleDescription": "更新 “{email}” 的角色。不允许修改自己的角色。",
+        "editRoleLabel": "角色",
+        "save": "保存",
+        "cancel": "取消",
+        "suspendTitle": "停用此用户？",
+        "suspendDescription": "“{email}” 将无法再登录，可随时重新启用。",
+        "confirmSuspend": "停用",
+        "reactivateTitle": "重新启用此用户？",
+        "reactivateDescription": "“{email}” 将使用原密码恢复访问。",
+        "confirmReactivate": "重新启用",
+        "updatedToast": "用户已更新",
+        "updateFailed": "更新失败",
+        "empty": "还没有团队成员，邀请一位开始吧。",
+        "loadFailed": "加载团队成员失败。"
+      },
+      "invite": {
+        "triggerLabel": "邀请用户",
+        "formTitle": "邀请团队成员",
+        "formDescription": "我们会生成一条 7 天有效的一次性链接。邮件投递暂未接入，请手动复制链接发送。",
+        "emailLabel": "邮箱",
+        "roleLabel": "角色",
+        "role": {
+          "admin": "管理员",
+          "operator": "运营",
+          "viewer": "只读"
+        },
+        "roleHint": {
+          "admin": "完全权限，包括团队与 API keys 管理。",
+          "operator": "可读写大多数资源，不能管理团队与 API keys。",
+          "viewer": "只读权限。"
+        },
+        "submit": "创建邀请",
+        "cancel": "取消",
+        "errorEmailRequired": "请输入邮箱。",
+        "errorGeneric": "创建邀请失败。",
+        "issuedTitle": "邀请已创建",
+        "issuedDescription": "把下方链接发给团队成员，他们将自行设置密码。",
+        "inviteUrlLabel": "邀请链接",
+        "copyAria": "复制邀请链接",
+        "copiedToast": "已复制到剪贴板",
+        "copyFailed": "复制失败 — 请手动选择并复制。",
+        "expiresHint": "{date} 过期。",
+        "done": "完成"
       }
     },
     "agentRuns": {

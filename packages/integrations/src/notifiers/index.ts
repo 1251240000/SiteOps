@@ -39,4 +39,28 @@ export { feishuNotifier } from './feishu.js';
 export { dingtalkNotifier } from './dingtalk.js';
 export { slackNotifier } from './slack.js';
 export { telegramNotifier } from './telegram.js';
-export { emailNotifier } from './email.js';
+export {
+  emailNotifier,
+  createEmailNotifier,
+  escapeHtml as escapeEmailHtml,
+  type EmailConfig,
+  type EmailNotifierDeps,
+} from './email.js';
+export {
+  createResendTransport,
+  createSmtpTransport,
+  createDisabledTransport,
+  type EmailMessage,
+  type EmailTransport,
+  type ResendTransportOptions,
+  type SmtpTransportOptions,
+  type DisabledTransportOptions,
+  type NodemailerCreateTransport,
+} from './email-transport.js';
+export {
+  getEmailTransport,
+  getEmailFrom,
+  __setEmailTransportForTests,
+  __resetEmailTransportForTests,
+  type EmailProvider,
+} from './email-transport-factory.js';

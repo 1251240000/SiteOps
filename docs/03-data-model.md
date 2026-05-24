@@ -295,6 +295,17 @@ unique `(site_id, fingerprint)`.
 | enabled    | boolean     |                                                                          |
 | created_at | timestamptz |                                                                          |
 
+`config` 解密后按 `type` 取不同 shape：
+
+| type       | shape                                                                                                                                           |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `webhook`  | `{ url: string; headers?: Record<string,string> }`                                                                                              |
+| `email`    | `{ to: string \| string[]; subjectPrefix?: string }` — 实际 transport（resend/smtp/disabled）由进程级 env (`EMAIL_PROVIDER` 等) 决定（M10/T44） |
+| `feishu`   | `{ webhookUrl: string; secret?: string }`                                                                                                       |
+| `dingtalk` | `{ webhookUrl: string; secret?: string }`                                                                                                       |
+| `slack`    | `{ webhookUrl: string }`                                                                                                                        |
+| `telegram` | `{ botToken: string; chatId: string \| number }`                                                                                                |
+
 ### 3.15 `alerts`
 
 | 字段              | 类型        | 说明                                 |

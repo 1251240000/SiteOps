@@ -16,7 +16,10 @@ vi.mock('@/lib/db', () => ({ getDb: vi.fn() }));
 import type { ApiKeyView } from '@siteops/db';
 
 import { GET as listApiKeys, POST as createApiKey } from '@/app/api/v1/settings/api-keys/route';
-import { DELETE as revokeApiKey } from '@/app/api/v1/settings/api-keys/[id]/route';
+import {
+  DELETE as revokeApiKey,
+  PATCH as patchApiKey,
+} from '@/app/api/v1/settings/api-keys/[id]/route';
 
 import {
   bindDbMock,
@@ -86,6 +89,28 @@ describe('POST /api/v1/settings/api-keys', () => {
       await buildRequest('http://localhost/api/v1/settings/api-keys', {
         method: 'POST',
         body: { name: 'mixed', scopes: ['*', 'errors:write'] },
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('persists the per-key rate_limit_per_min when supplied', async () => {
+    const res = await createApiKey(
+      await buildRequest('http://localhost/api/v1/settings/api-keys', {
+        method: 'POST',
+        body: { name: 'tight', scopes: ['errors:write'], rateLimitPerMin: 60 },
+      }),
+    );
+    expect(res.status).toBe(201);
+    const body = await readJson<{ data: { apiKey: ApiKeyView } }>(res);
+    expect(body.data.apiKey.rateLimitPerMin).toBe(60);
+  });
+
+  it('rejects rateLimitPerMin <= 0 at the schema layer', async () => {
+    const res = await createApiKey(
+      await buildRequest('http://localhost/api/v1/settings/api-keys', {
+        method: 'POST',
+        body: { name: 'bad', scopes: ['errors:write'], rateLimitPerMin: 0 },
       }),
     );
     expect(res.status).toBe(400);
@@ -168,6 +193,131 @@ describe('DELETE /api/v1/settings/api-keys/:id', () => {
         { method: 'DELETE' },
       ),
       routeContext({ id: '00000000-0000-4000-8000-000000000000' }),
+    );
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PATCH /api/v1/settings/api-keys/:id', () => {
+  it('returns 401 without a session', async () => {
+    await setSession(null);
+    const res = await patchApiKey(
+      await buildRequest('http://localhost/api/v1/settings/api-keys/x', {
+        method: 'PATCH',
+        body: { rateLimitPerMin: 60 },
+      }),
+      routeContext({ id: 'x' }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('400s on invalid uuid', async () => {
+    const res = await patchApiKey(
+      await buildRequest('http://localhost/api/v1/settings/api-keys/not-a-uuid', {
+        method: 'PATCH',
+        body: { rateLimitPerMin: 60 },
+      }),
+      routeContext({ id: 'not-a-uuid' }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('400s when the body has no mutable fields', async () => {
+    const created = await createApiKey(
+      await buildRequest('http://localhost/api/v1/settings/api-keys', {
+        method: 'POST',
+        body: { name: 'patch-empty', scopes: ['errors:write'] },
+      }),
+    );
+    const { data } = await readJson<{ data: { apiKey: { id: string } } }>(created);
+    const res = await patchApiKey(
+      await buildRequest(`http://localhost/api/v1/settings/api-keys/${data.apiKey.id}`, {
+        method: 'PATCH',
+        body: {},
+      }),
+      routeContext({ id: data.apiKey.id }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('updates rate_limit_per_min and returns the new row', async () => {
+    const created = await createApiKey(
+      await buildRequest('http://localhost/api/v1/settings/api-keys', {
+        method: 'POST',
+        body: { name: 'patch-me', scopes: ['errors:write'] },
+      }),
+    );
+    const { data } = await readJson<{
+      data: { apiKey: { id: string; rateLimitPerMin: number | null } };
+    }>(created);
+    expect(data.apiKey.rateLimitPerMin).toBeNull();
+
+    const res = await patchApiKey(
+      await buildRequest(`http://localhost/api/v1/settings/api-keys/${data.apiKey.id}`, {
+        method: 'PATCH',
+        body: { rateLimitPerMin: 120 },
+      }),
+      routeContext({ id: data.apiKey.id }),
+    );
+    expect(res.status).toBe(200);
+    const body = await readJson<{ data: ApiKeyView }>(res);
+    expect(body.data.rateLimitPerMin).toBe(120);
+  });
+
+  it('null rateLimitPerMin clears the override', async () => {
+    const created = await createApiKey(
+      await buildRequest('http://localhost/api/v1/settings/api-keys', {
+        method: 'POST',
+        body: { name: 'clear-me', scopes: ['errors:write'], rateLimitPerMin: 30 },
+      }),
+    );
+    const { data } = await readJson<{ data: { apiKey: { id: string } } }>(created);
+
+    const res = await patchApiKey(
+      await buildRequest(`http://localhost/api/v1/settings/api-keys/${data.apiKey.id}`, {
+        method: 'PATCH',
+        body: { rateLimitPerMin: null },
+      }),
+      routeContext({ id: data.apiKey.id }),
+    );
+    expect(res.status).toBe(200);
+    const body = await readJson<{ data: ApiKeyView }>(res);
+    expect(body.data.rateLimitPerMin).toBeNull();
+  });
+
+  it('404s on unknown id', async () => {
+    const res = await patchApiKey(
+      await buildRequest(
+        'http://localhost/api/v1/settings/api-keys/00000000-0000-4000-8000-000000000000',
+        { method: 'PATCH', body: { rateLimitPerMin: 60 } },
+      ),
+      routeContext({ id: '00000000-0000-4000-8000-000000000000' }),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('refuses to update revoked rows (404)', async () => {
+    const created = await createApiKey(
+      await buildRequest('http://localhost/api/v1/settings/api-keys', {
+        method: 'POST',
+        body: { name: 'revoked-then-patched', scopes: ['errors:write'] },
+      }),
+    );
+    const { data } = await readJson<{ data: { apiKey: { id: string } } }>(created);
+
+    await revokeApiKey(
+      await buildRequest(`http://localhost/api/v1/settings/api-keys/${data.apiKey.id}`, {
+        method: 'DELETE',
+      }),
+      routeContext({ id: data.apiKey.id }),
+    );
+
+    const res = await patchApiKey(
+      await buildRequest(`http://localhost/api/v1/settings/api-keys/${data.apiKey.id}`, {
+        method: 'PATCH',
+        body: { rateLimitPerMin: 60 },
+      }),
+      routeContext({ id: data.apiKey.id }),
     );
     expect(res.status).toBe(404);
   });

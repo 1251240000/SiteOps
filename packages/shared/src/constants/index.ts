@@ -7,3 +7,4 @@ export * from './tasks.js';
 export * from './agent-runs.js';
 export * from './webhooks.js';
 export * from './api-keys.js';
+export * from './users.js';

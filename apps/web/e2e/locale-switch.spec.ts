@@ -19,8 +19,14 @@ const ADMIN_EMAIL =
 const ADMIN_PASSWORD =
   process.env['E2E_ADMIN_PASSWORD'] ?? process.env['ADMIN_PASSWORD'] ?? 'ChangeMe123!';
 
-// Ensure no locale cookie carries over from other specs.
-test.use({ storageState: { cookies: [], origins: [] } });
+// Ensure no locale cookie carries over from other specs, and pin the browser
+// `Accept-Language` to `zh-CN` so the middleware's no-cookie negotiation lands
+// on the zh-CN catalog (otherwise Chromium's default `en-US` short-circuits
+// the very thing this test is meant to verify).
+test.use({
+  storageState: { cookies: [], origins: [] },
+  locale: 'zh-CN',
+});
 
 async function signIn(page: Page): Promise<void> {
   await page.goto('/login');

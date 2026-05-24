@@ -59,7 +59,7 @@ export function PATCH(req: NextRequest, routeCtx: RouteContext) {
       );
       return ok(row);
     },
-    { scopes: ['errors:write'] },
+    { scopes: ['errors:write'], permission: 'errors.write' },
   )(req);
 }
 
@@ -73,6 +73,6 @@ export function DELETE(req: NextRequest, routeCtx: RouteContext) {
       );
       return ok(row);
     },
-    { scopes: ['errors:write'] },
+    { scopes: ['errors:write'], permission: 'errors.write' },
   )(req);
 }

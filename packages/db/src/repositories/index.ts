@@ -14,3 +14,5 @@ export * from './task-repo.js';
 export * from './agent-run-repo.js';
 export * from './webhook-event-repo.js';
 export * from './api-key-repo.js';
+export * from './user-repo.js';
+export * from './user-invitation-repo.js';

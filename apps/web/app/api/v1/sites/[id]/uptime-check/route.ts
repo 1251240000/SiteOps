@@ -62,6 +62,6 @@ export function POST(req: NextRequest, routeCtx: RouteContext) {
         { status: 201 },
       );
     },
-    { scopes: ['uptime:write'] },
+    { scopes: ['uptime:write'], permission: 'sites.write' },
   )(req);
 }

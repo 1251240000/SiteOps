@@ -65,6 +65,6 @@ export function POST(req: NextRequest, routeCtx: RouteContext) {
       );
       return ok(created, { status: 201 });
     },
-    { scopes: ['metrics:write'] },
+    { scopes: ['metrics:write'], permission: 'roi.write' },
   )(req);
 }

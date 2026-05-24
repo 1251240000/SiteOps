@@ -1,12 +1,13 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, RotateCw, ShieldAlert } from 'lucide-react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { RotateCw, ShieldAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { parseAsInteger, parseAsString, useQueryState } from 'nuqs';
+import { parseAsString, useQueryState } from 'nuqs';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 
+import { LoadMoreFooter } from '@/components/common/load-more-footer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,12 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api, type ApiError, type ApiSuccess } from '@/lib/api-client';
+import {
+  flattenCursorPages,
+  getNextCursorParam,
+  INITIAL_CURSOR,
+  type CursorPage,
+} from '@/lib/queries/cursor';
 import {
   webhooksKeys,
   type ReplayResponse,
@@ -56,9 +63,15 @@ const STATE_BADGE: Record<
   'bad-sig': 'destructive',
 };
 
+/**
+ * Webhook deliveries table. Uses cursor-based pagination (T36) via
+ * `useInfiniteQuery` — first request omits `?cursor=`, follow-ups pass
+ * the opaque cursor returned by the server. Filters (`provider`, `state`,
+ * `signatureOk`) live in URL state; `?page=` was removed because cursors
+ * are opaque and not stable across mutations (e.g. replay).
+ */
 export function WebhooksTable() {
   const t = useTranslations('pages.webhooks');
-  const tCommon = useTranslations('common');
   const qc = useQueryClient();
 
   const [provider, setProvider] = useQueryState('provider', parseAsString.withDefault('all'));
@@ -67,20 +80,31 @@ export function WebhooksTable() {
     'signatureOk',
     parseAsString.withDefault('all'),
   );
-  const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
 
-  const query = useMemo(() => {
-    const out: Record<string, string | number> = { page, limit: PAGE_SIZE };
+  // Filter-only query — `cursor` is appended per request inside `queryFn`.
+  // Excluding cursor from the cache key means a filter change resets the
+  // walk while `fetchNextPage()` re-uses the same key.
+  const filterQuery = useMemo(() => {
+    const out: Record<string, string | number> = { limit: PAGE_SIZE };
     if (provider !== 'all') out['provider'] = provider;
     if (state !== 'all') out['state'] = state;
     if (signatureOk !== 'all') out['signatureOk'] = signatureOk;
     return out;
-  }, [provider, state, signatureOk, page]);
+  }, [provider, state, signatureOk]);
 
-  const { data, isLoading, error } = useQuery<ApiSuccess<WebhookEventRow[]>, ApiError>({
-    queryKey: webhooksKeys.list(query),
-    queryFn: () => api.get<WebhookEventRow[]>('/hooks', { query }),
-  });
+  const { data, isLoading, error, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useInfiniteQuery<CursorPage<WebhookEventRow>, ApiError>({
+      queryKey: webhooksKeys.list(filterQuery),
+      initialPageParam: INITIAL_CURSOR,
+      queryFn: ({ pageParam }) =>
+        api.get<WebhookEventRow[]>('/hooks', {
+          query: {
+            ...filterQuery,
+            ...(typeof pageParam === 'string' && pageParam ? { cursor: pageParam } : {}),
+          },
+        }),
+      getNextPageParam: getNextCursorParam,
+    });
 
   const replay = useMutation<
     ApiSuccess<ReplayResponse>,
@@ -99,10 +123,7 @@ export function WebhooksTable() {
     onError: (err) => toast.error(err.message || t('table.replayFailed')),
   });
 
-  const items = data?.data ?? [];
-  const meta = data?.meta as
-    | { page: number; limit: number; total: number; totalPages: number }
-    | undefined;
+  const items = useMemo(() => flattenCursorPages<WebhookEventRow>(data), [data]);
 
   return (
     <div className="space-y-3">
@@ -245,44 +266,14 @@ export function WebhooksTable() {
         </table>
       </div>
 
-      <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span>
-          {meta
-            ? tCommon('pagination.showing', {
-                from: items.length ? (meta.page - 1) * meta.limit + 1 : 0,
-                to: (meta.page - 1) * meta.limit + items.length,
-                total: meta.total,
-              })
-            : '\u00A0'}
-        </span>
-        <div className="flex items-center gap-2">
-          <span>
-            {tCommon.rich('pagination.page', {
-              strong: (chunks) => <strong>{chunks}</strong>,
-              page: meta?.page ?? page,
-              total: meta?.totalPages ?? 1,
-            })}
-          </span>
-          <Button
-            size="icon"
-            variant="outline"
-            disabled={!meta || meta.page <= 1}
-            onClick={() => setPage(Math.max(1, (meta?.page ?? page) - 1))}
-            aria-label={tCommon('pagination.previous')}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            disabled={!meta || meta.page >= (meta?.totalPages ?? 1)}
-            onClick={() => setPage((meta?.page ?? page) + 1)}
-            aria-label={tCommon('pagination.next')}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
+      <LoadMoreFooter
+        loadedCount={items.length}
+        hasMore={hasNextPage}
+        isFetchingMore={isFetchingNextPage}
+        onLoadMore={() => {
+          void fetchNextPage();
+        }}
+      />
     </div>
   );
 }

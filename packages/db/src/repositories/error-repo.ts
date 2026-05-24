@@ -5,7 +5,9 @@
  * `count` + bump `lastSeenAt` if a row already exists, otherwise insert a
  * fresh row. `pruneOlderThan` is used by housekeeping.
  */
-import { and, count, desc, eq, gte, ilike, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, isNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
+
+import { clampLimit, encodeCursor, type Cursor } from '@siteops/shared';
 
 import type { Db } from '../client.js';
 import {
@@ -25,8 +27,21 @@ export type ErrorListFilters = {
 
 export type ErrorListOptions = {
   filters?: ErrorListFilters;
+  /** Legacy 1-indexed page. Ignored when `cursor` is supplied. */
   page?: number;
   limit?: number;
+  /** Keyset cursor (decoded). Sort is fixed to `(last_seen_at DESC, id DESC)`. */
+  cursor?: Cursor;
+};
+
+export type ErrorListPage = {
+  items: ErrorRow[];
+  page: number;
+  limit: number;
+  /** `0` in cursor mode (uncomputed). */
+  total: number;
+  nextCursor: string | null;
+  hasMore: boolean;
 };
 
 function whereForList(f: ErrorListFilters = {}): SQL | undefined {
@@ -98,23 +113,60 @@ export const errorRepo = {
     return { row: r, created: true };
   },
 
-  async list(
-    db: Db,
-    opts: ErrorListOptions = {},
-  ): Promise<{ items: ErrorRow[]; page: number; limit: number; total: number }> {
+  async list(db: Db, opts: ErrorListOptions = {}): Promise<ErrorListPage> {
+    const limit = clampLimit(opts.limit, 20);
+    const filterWhere = whereForList(opts.filters);
+
+    if (opts.cursor) {
+      const c = opts.cursor;
+      const cursorTs = new Date(c.ts);
+      const keysetWhere = or(
+        lt(errors.lastSeenAt, cursorTs),
+        and(eq(errors.lastSeenAt, cursorTs), lt(errors.id, c.id)),
+      );
+      const where = filterWhere ? and(filterWhere, keysetWhere) : keysetWhere;
+
+      const rows = await db
+        .select()
+        .from(errors)
+        .where(where)
+        .orderBy(desc(errors.lastSeenAt), desc(errors.id))
+        .limit(limit + 1);
+
+      const hasMore = rows.length > limit;
+      const items = hasMore ? rows.slice(0, limit) : rows;
+      const last = items[items.length - 1];
+      const nextCursor =
+        hasMore && last ? encodeCursor({ id: last.id, ts: last.lastSeenAt.toISOString() }) : null;
+      return { items, page: 1, limit, total: 0, nextCursor, hasMore };
+    }
+
     const page = Math.max(1, opts.page ?? 1);
-    const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
     const offset = (page - 1) * limit;
-    const where = whereForList(opts.filters);
     const items = await db
       .select()
       .from(errors)
-      .where(where)
+      .where(filterWhere)
       .orderBy(desc(errors.lastSeenAt))
       .limit(limit)
       .offset(offset);
-    const totalRow = await db.select({ count: count() }).from(errors).where(where);
-    return { items, page, limit, total: Number(totalRow[0]?.count ?? 0) };
+    const totalRow = await db.select({ count: count() }).from(errors).where(filterWhere);
+    const total = Number(totalRow[0]?.count ?? 0);
+
+    // Forward cursor so callers can switch to keyset mode after page 1.
+    const hasMore = page * limit < total;
+    const last = items[items.length - 1];
+    const nextCursor =
+      hasMore && last ? encodeCursor({ id: last.id, ts: last.lastSeenAt.toISOString() }) : null;
+
+    return {
+      items,
+      page,
+      limit,
+      total,
+      nextCursor,
+      hasMore,
+    };
   },
 
   async getById(db: Db, id: string): Promise<ErrorRow | null> {

@@ -29,11 +29,14 @@ import {
   comparePassword,
 } from '@siteops/shared';
 
-/** What the HTTP layer is allowed to see about the logged-in admin. */
+import { apiKeyCache } from './api-key-cache.js';
+
+/** What the HTTP layer is allowed to see about the logged-in user. */
 export type AuthenticatedUser = {
   id: string;
   email: string;
   name: string | null;
+  role: string;
 };
 
 /** What the HTTP layer is allowed to see about an authenticated API key. */
@@ -41,6 +44,11 @@ export type AuthenticatedApiKey = {
   id: string;
   name: string;
   scopes: string[];
+  /**
+   * Optional per-key rate-limit override (T38). `null` means the caller
+   * falls back to the global `API_KEY_RATE_LIMIT_PER_MIN` env value.
+   */
+  rateLimitPerMin: number | null;
 };
 
 /**
@@ -89,14 +97,23 @@ export async function verifyAdminPassword(
       email: users.email,
       name: users.name,
       passwordHash: users.passwordHash,
+      role: users.role,
+      status: users.status,
     })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
 
-  const row: Pick<User, 'id' | 'email' | 'name' | 'passwordHash'> | undefined = found[0];
+  const row: Pick<User, 'id' | 'email' | 'name' | 'passwordHash' | 'role' | 'status'> | undefined =
+    found[0];
 
   if (!row) {
+    await comparePassword(input.password, await getDummyHash());
+    return null;
+  }
+
+  // Reject suspended users
+  if (row.status === 'suspended') {
     await comparePassword(input.password, await getDummyHash());
     return null;
   }
@@ -104,13 +121,25 @@ export async function verifyAdminPassword(
   const ok = await comparePassword(input.password, row.passwordHash);
   if (!ok) return null;
 
-  return { id: row.id, email: row.email, name: row.name };
+  // Stamp last_login_at; failures are non-fatal.
+  void db
+    .update(users)
+    .set({ lastLoginAt: sql`now()` })
+    .where(eq(users.id, row.id))
+    .catch(() => undefined);
+
+  return { id: row.id, email: row.email, name: row.name, role: row.role };
 }
 
 /**
  * Validate a bearer API key (plaintext) against the `api_keys` table.
  *
  * Look-up strategy:
+ *  0. Probe the in-process `apiKeyCache` (T30). On a non-expired hit, return
+ *     immediately and skip the DB + bcrypt round-trip. `last_used_at` is
+ *     deliberately NOT stamped on a hit — at the cache's 60 s TTL we still
+ *     get at least one stamp per active minute, which is the granularity
+ *     the dashboard reports anyway.
  *  1. Slice the first `API_KEY_PREFIX_LENGTH` chars and find candidate rows
  *     by `key_prefix` (indexed). In practice there is one match; we tolerate
  *     ties for forward compatibility.
@@ -118,10 +147,13 @@ export async function verifyAdminPassword(
  *  3. Reject if `revoked_at` is set or `expires_at` is in the past.
  *  4. On success, asynchronously stamp `last_used_at = now()` (best effort,
  *     swallowed if it fails so a transient DB write error never 401's a
- *     legitimate caller).
+ *     legitimate caller), and populate the cache.
  */
 export async function verifyApiKey(db: Db, plaintext: string): Promise<AuthenticatedApiKey | null> {
   if (!plaintext || plaintext.length < API_KEY_PREFIX_LENGTH) return null;
+
+  const cached = apiKeyCache.get(plaintext);
+  if (cached) return cached.apiKey;
 
   const prefix = apiKeyPrefix(plaintext);
   const rows = await db
@@ -130,6 +162,7 @@ export async function verifyApiKey(db: Db, plaintext: string): Promise<Authentic
       name: apiKeys.name,
       keyHash: apiKeys.keyHash,
       scopes: apiKeys.scopes,
+      rateLimitPerMin: apiKeys.rateLimitPerMin,
       expiresAt: apiKeys.expiresAt,
       revokedAt: apiKeys.revokedAt,
     })
@@ -137,7 +170,10 @@ export async function verifyApiKey(db: Db, plaintext: string): Promise<Authentic
     .where(and(eq(apiKeys.keyPrefix, prefix), isNull(apiKeys.revokedAt)));
 
   const now = new Date();
-  type Row = Pick<ApiKey, 'id' | 'name' | 'keyHash' | 'scopes' | 'expiresAt' | 'revokedAt'>;
+  type Row = Pick<
+    ApiKey,
+    'id' | 'name' | 'keyHash' | 'scopes' | 'rateLimitPerMin' | 'expiresAt' | 'revokedAt'
+  >;
   const candidates: Row[] = rows;
 
   for (const row of candidates) {
@@ -152,7 +188,14 @@ export async function verifyApiKey(db: Db, plaintext: string): Promise<Authentic
       .where(eq(apiKeys.id, row.id))
       .catch(() => undefined);
 
-    return { id: row.id, name: row.name, scopes: row.scopes };
+    const apiKey: AuthenticatedApiKey = {
+      id: row.id,
+      name: row.name,
+      scopes: row.scopes,
+      rateLimitPerMin: row.rateLimitPerMin,
+    };
+    apiKeyCache.set(plaintext, { apiKey, expiresAt: row.expiresAt, id: row.id });
+    return apiKey;
   }
 
   return null;

@@ -6,10 +6,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+// Narrow subpath import: the root `@siteops/shared` barrel re-exports
+// server-only utils (e.g. `ssrf.ts` → `node:net`), which Turbopack can't
+// tree-shake out of a client bundle and surfaces as a build-error overlay.
+import { can, type UserRole } from '@siteops/shared/constants';
+
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 import { NAV_ITEMS } from './nav-config';
+
+export interface SidebarProps {
+  /** Role of the current session. Controls which nav entries are rendered. */
+  role: UserRole;
+}
 
 const STORAGE_KEY = 'siteops:sidebar-collapsed';
 
@@ -19,11 +29,13 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar() {
+export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const tNav = useTranslations('nav');
   const tSide = useTranslations('sidebar');
   const [collapsed, setCollapsed] = useState<boolean>(false);
+
+  const visibleItems = NAV_ITEMS.filter((item) => !item.permission || can(role, item.permission));
 
   // Read the persisted preference after mount — avoids hydration mismatches
   // that would otherwise flash the wrong width on the first paint.
@@ -89,7 +101,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 p-2" aria-label={tNav('sectionsAriaLabel')}>
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
           const label = tNav(item.key);

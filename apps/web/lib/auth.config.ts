@@ -83,20 +83,22 @@ export const authConfig = {
       return Response.redirect(signInUrl);
     },
     /**
-     * Stamp the user id onto the JWT at sign-in. Auth.js's default JWT
-     * callback already copies `name` / `email` / `picture` from the User
-     * object into the token, so we only need to set `sub` ourselves.
+     * Stamp the user id and role onto the JWT at sign-in. Auth.js's default
+     * JWT callback already copies `name` / `email` / `picture` from the User
+     * object into the token, so we only need to set `sub` and `role` ourselves.
      */
     async jwt({ token, user }) {
       if (user && typeof user.id === 'string' && user.id.length > 0) {
         token.sub = user.id;
+        token.role = (user as { role?: string }).role ?? 'admin';
       }
       return token;
     },
-    /** Surface `id` on the Session object the React/API consumers see. */
+    /** Surface `id` and `role` on the Session object the React/API consumers see. */
     async session({ session, token }) {
       if (session.user && typeof token.sub === 'string') {
         session.user.id = token.sub;
+        (session.user as { role: string }).role = (token.role as string) ?? 'admin';
       }
       return session;
     },

@@ -5,7 +5,22 @@
  * Readers expose simple time-bucket aggregations (5m/1h/1d) so the API
  * route can hand a JSON-friendly series straight to the chart component.
  */
-import { and, between, count, desc, eq, gte, isNull, lte, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  between,
+  count,
+  desc,
+  eq,
+  gte,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
+
+import { clampLimit, encodeCursor, type Cursor } from '@siteops/shared';
 
 import type { Db } from '../client.js';
 import { uptimeChecks, type NewUptimeCheck, type UptimeCheck } from '../schema/uptime-checks.js';
@@ -71,6 +86,61 @@ export const uptimeRepo = {
       .where(where)
       .orderBy(desc(uptimeChecks.checkedAt))
       .limit(limit);
+  },
+
+  /**
+   * Keyset-paginated reader for the "recent checks" tail. The sort is
+   * always `(checked_at DESC, id DESC)` so it lines up with the
+   * `uptime_checks_site_checked_idx` index for fast tail-scans.
+   *
+   * `cursor.id` is a stringified bigint — `uptime_checks.id` is a
+   * `bigserial`, so encoders / decoders use `String(row.id)`. The repo
+   * casts back to `bigint` before passing to drizzle's `lt`.
+   */
+  async listCursor(
+    db: Db,
+    siteId: string,
+    opts: {
+      limit?: number;
+      okOnly?: boolean;
+      failuresOnly?: boolean;
+      cursor?: Cursor;
+    } = {},
+  ): Promise<{ items: UptimeCheck[]; nextCursor: string | null; hasMore: boolean; limit: number }> {
+    const limit = clampLimit(opts.limit, 20);
+    const clauses: SQL[] = [eq(uptimeChecks.siteId, siteId)];
+    if (opts.failuresOnly) clauses.push(eq(uptimeChecks.ok, false));
+    if (opts.okOnly) clauses.push(eq(uptimeChecks.ok, true));
+
+    if (opts.cursor) {
+      const c = opts.cursor;
+      const cursorTs = new Date(c.ts);
+      // `id` is bigint at the DB level — bring the wire-string back to
+      // bigint so drizzle emits the comparison as numeric, not text.
+      const cursorId = BigInt(c.id);
+      const keysetWhere = or(
+        lt(uptimeChecks.checkedAt, cursorTs),
+        and(eq(uptimeChecks.checkedAt, cursorTs), lt(uptimeChecks.id, cursorId)),
+      );
+      if (keysetWhere) clauses.push(keysetWhere);
+    }
+
+    const where = clauses.length === 1 ? clauses[0] : and(...clauses);
+    const rows = await db
+      .select()
+      .from(uptimeChecks)
+      .where(where)
+      .orderBy(desc(uptimeChecks.checkedAt), desc(uptimeChecks.id))
+      .limit(limit + 1);
+
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const last = items[items.length - 1];
+    const nextCursor =
+      hasMore && last
+        ? encodeCursor({ id: String(last.id), ts: last.checkedAt.toISOString() })
+        : null;
+    return { items, nextCursor, hasMore, limit };
   },
 
   /** Time-bucketed series for the chart. */

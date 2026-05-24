@@ -1,12 +1,27 @@
 import { errorTracking as errSvc } from '@siteops/services';
-import { AppError, listErrorsQuerySchema, reportErrorBodySchema } from '@siteops/shared';
+import {
+  AppError,
+  decodeCursor,
+  listErrorsQuerySchema,
+  reportErrorBodySchema,
+} from '@siteops/shared';
 
 import { getDb } from '@/lib/db';
 import { ok, withApiKeyAudited, withAuth } from '@/lib/with-api';
 
 export const dynamic = 'force-dynamic';
 
-/** GET /api/v1/errors — dashboard list. */
+/**
+ * GET /api/v1/errors — dashboard list.
+ *
+ * Pagination (T36):
+ *   - `?page=N&limit=M` — legacy offset path.
+ *   - `?cursor=<base64url>&limit=M` — keyset path; meta becomes
+ *     `{ cursor: { next }, hasMore, limit }`. `last_seen_at DESC` is the
+ *     stable sort, so resolving an error mid-walk may shift its position
+ *     on subsequent pages — that's expected, and the cursor still
+ *     guarantees forward progress.
+ */
 export const GET = withAuth(
   async (req, ctx) => {
     const url = new URL(req.url);
@@ -28,16 +43,45 @@ export const GET = withAuth(
       ...(parsed.data.q ? { q: parsed.data.q } : {}),
       resolved: parsed.data.resolved ?? false,
     } as const;
+    let cursor;
+    if (parsed.data.cursor) {
+      cursor = decodeCursor(parsed.data.cursor);
+      if (!cursor) {
+        throw new AppError('Invalid cursor', {
+          code: 'validation_failed',
+          status: 400,
+          details: { cursor: 'malformed or expired' },
+        });
+      }
+    }
     const page = await errSvc.errorTrackingService.list(
       { db: getDb(), logger: ctx.logger },
-      { page: parsed.data.page, limit: parsed.data.limit, filters },
+      {
+        page: parsed.data.page,
+        limit: parsed.data.limit,
+        filters,
+        ...(cursor ? { cursor } : {}),
+      },
     );
+    if (cursor) {
+      return ok(page.items, {
+        meta: {
+          cursor: { next: page.nextCursor },
+          hasMore: page.hasMore,
+          limit: page.limit,
+        },
+      });
+    }
+    // Offset mode also exposes a forward cursor so callers can switch
+    // to keyset mode after page 1 without an awkward bootstrap.
     return ok(page.items, {
       meta: {
         page: page.page,
         limit: page.limit,
         total: page.total,
         totalPages: Math.max(1, Math.ceil(page.total / page.limit)),
+        cursor: { next: page.nextCursor },
+        hasMore: page.hasMore,
       },
     });
   },

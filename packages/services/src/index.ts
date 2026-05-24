@@ -18,3 +18,4 @@ export * as integrations from './integrations/index.js';
 export * as tasks from './tasks/index.js';
 export * as agents from './agents/index.js';
 export * as webhooks from './webhooks/index.js';
+export * as users from './users/index.js';

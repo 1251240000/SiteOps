@@ -1,15 +1,22 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { parseAsString, useQueryState } from 'nuqs';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { LoadMoreFooter } from '@/components/common/load-more-footer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api, type ApiError, type ApiSuccess } from '@/lib/api-client';
+import { api, type ApiError } from '@/lib/api-client';
+import {
+  flattenCursorPages,
+  getNextCursorParam,
+  INITIAL_CURSOR,
+  type CursorPage,
+} from '@/lib/queries/cursor';
 
 import { ErrorDetailDrawer } from './ErrorDetailDrawer';
 
@@ -26,8 +33,16 @@ type ErrorRow = {
   fingerprint: string;
 };
 
+const PAGE_SIZE = 50;
+
 const queryKey = (q: Record<string, string>) => ['errors', q] as const;
 
+/**
+ * Errors list. Uses cursor-based pagination (T36) via `useInfiniteQuery` —
+ * filters (`level`, `resolved`) live in URL state and form the cache key,
+ * while the opaque cursor is appended per request inside `queryFn` so a
+ * filter change resets the walk and a "Load more" click extends it.
+ */
 export function ErrorList() {
   const t = useTranslations('pages.errors.list');
   const tEnumLevel = useTranslations('enums.errorLevel');
@@ -35,16 +50,29 @@ export function ErrorList() {
   const [resolved, setResolved] = useQueryState('resolved', parseAsString.withDefault('false'));
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const queryParams = {
-    ...(level ? { level } : {}),
-    resolved,
-    limit: '50',
-  };
+  // Filter-only query — `cursor` is appended per request inside `queryFn`.
+  const filterQuery = useMemo<Record<string, string>>(
+    () => ({
+      ...(level ? { level } : {}),
+      resolved,
+      limit: String(PAGE_SIZE),
+    }),
+    [level, resolved],
+  );
   const qc = useQueryClient();
-  const { data, isLoading, error } = useQuery<ApiSuccess<ErrorRow[]>, ApiError>({
-    queryKey: queryKey(queryParams),
-    queryFn: () => api.get('/errors', { query: queryParams }),
-  });
+  const { data, isLoading, error, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useInfiniteQuery<CursorPage<ErrorRow>, ApiError>({
+      queryKey: queryKey(filterQuery),
+      initialPageParam: INITIAL_CURSOR,
+      queryFn: ({ pageParam }) =>
+        api.get<ErrorRow[]>('/errors', {
+          query: {
+            ...filterQuery,
+            ...(typeof pageParam === 'string' && pageParam ? { cursor: pageParam } : {}),
+          },
+        }),
+      getNextPageParam: getNextCursorParam,
+    });
 
   const resolveMut = useMutation<unknown, ApiError, { id: string; resolved: boolean }>({
     mutationFn: async ({ id, resolved: r }) => api.patch(`/errors/${id}`, { resolved: r }),
@@ -54,7 +82,7 @@ export function ErrorList() {
     onError: (e) => toast.error(e.message),
   });
 
-  const items = data?.data ?? [];
+  const items = useMemo(() => flattenCursorPages<ErrorRow>(data), [data]);
   const selected = items.find((i) => i.id === selectedId) ?? null;
 
   return (
@@ -169,6 +197,15 @@ export function ErrorList() {
           </tbody>
         </table>
       </div>
+
+      <LoadMoreFooter
+        loadedCount={items.length}
+        hasMore={hasNextPage}
+        isFetchingMore={isFetchingNextPage}
+        onLoadMore={() => {
+          void fetchNextPage();
+        }}
+      />
 
       <ErrorDetailDrawer error={selected} onClose={() => setSelectedId(null)} />
     </div>

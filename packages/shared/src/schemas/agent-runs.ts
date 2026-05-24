@@ -27,6 +27,11 @@ export const listAgentRunsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   sort: z.enum(['-created_at', 'created_at']).default('-created_at'),
+  /**
+   * Opaque base64url keyset cursor. When set, the route ignores `page` and
+   * switches to keyset pagination — meta becomes `{ cursor: { next? }, hasMore }`.
+   */
+  cursor: z.string().min(1).max(512).optional(),
 });
 export type ListAgentRunsQuery = z.infer<typeof listAgentRunsQuerySchema>;
 

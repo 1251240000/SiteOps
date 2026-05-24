@@ -81,11 +81,12 @@ const nodeConfig: NextAuthConfig = {
             await jitter();
             return null;
           }
-          log.info({ ip, userId: user.id }, 'login ok');
+          log.info({ ip, userId: user.id, role: user.role }, 'login ok');
           return {
             id: user.id,
             email: user.email,
             name: user.name,
+            role: user.role as 'admin' | 'operator' | 'viewer',
           };
         } catch (err) {
           log.error(

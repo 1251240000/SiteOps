@@ -106,7 +106,7 @@ describe('withApiKey rate limiting', () => {
     expect(res.headers.get('x-ratelimit-reset')).toBe('60');
   });
 
-  it('keys the limiter on api_keys.id (not plaintext or IP)', async () => {
+  it('keys the limiter on api_keys.id (not plaintext or IP) and forwards rateLimitPerMin', async () => {
     const plaintext = await seedApiKey();
     checkRl.mockResolvedValueOnce({ allowed: true, count: 1, limit: 600, retryAfterSec: 60 });
 
@@ -117,9 +117,10 @@ describe('withApiKey rate limiting', () => {
       }),
     );
     expect(checkRl).toHaveBeenCalledTimes(1);
-    const arg = checkRl.mock.calls[0]?.[0] as string;
-    expect(arg).toMatch(/^[0-9a-f-]{36}$/);
-    expect(arg).not.toBe(plaintext);
+    const arg = checkRl.mock.calls[0]?.[0] as { id: string; rateLimitPerMin: number | null };
+    expect(arg.id).toMatch(/^[0-9a-f-]{36}$/);
+    // Seeded row has no override → forwarded as null.
+    expect(arg.rateLimitPerMin).toBeNull();
   });
 
   it('does NOT consult the limiter when the key is invalid (still 401)', async () => {

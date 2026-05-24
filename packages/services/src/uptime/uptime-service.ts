@@ -13,7 +13,7 @@
  * scoring logic without a real network call.
  */
 import { siteRepo, uptimeRepo, type Db, type UptimeBucket, type UptimeCheck } from '@siteops/db';
-import { AppError, assertOutboundUrl, type Logger } from '@siteops/shared';
+import { AppError, assertOutboundUrl, type Cursor, type Logger } from '@siteops/shared';
 
 const HEALTH_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PROBE_TIMEOUT_MS = 10_000;
@@ -199,6 +199,19 @@ export const uptimeService = {
     limit = 20,
   ): Promise<UptimeCheck[]> {
     return uptimeRepo.listRecent(deps.db, siteId, { failuresOnly: true, limit });
+  },
+
+  /**
+   * Keyset-paginated tail-list of uptime checks. Used by the cursor mode
+   * on `GET /api/v1/sites/{id}/uptime?cursor=...` (T36). The cursor is
+   * opaque to the caller; pass back what you got in `meta.cursor.next`.
+   */
+  async listChecksCursor(
+    deps: UptimeServiceDeps,
+    siteId: string,
+    opts: { cursor?: Cursor; limit?: number; failuresOnly?: boolean; okOnly?: boolean } = {},
+  ): Promise<{ items: UptimeCheck[]; nextCursor: string | null; hasMore: boolean; limit: number }> {
+    return uptimeRepo.listCursor(deps.db, siteId, opts);
   },
 };
 

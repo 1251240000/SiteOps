@@ -11,6 +11,16 @@ import tsconfigPaths from 'vite-tsconfig-paths';
  * - Uses Node environment because we exercise API route handlers (which run
  *   server-side) and PGlite via `@siteops/db/testing`.
  * - Excludes the `e2e/` Playwright suite, which has its own runner.
+ *
+ * Coverage (T50):
+ *   - v8 provider; html + json-summary reports so CI can upload the artifact
+ *     and humans can browse it locally (`open coverage/index.html`).
+ *   - `include` is scoped to server-side modules we actually unit-test;
+ *     untested route handlers / React components would otherwise drag the
+ *     denominator down to noise and force us to chase coverage on things
+ *     that are intentionally covered by Playwright (`apps/web/e2e`).
+ *   - Thresholds reflect what the unit suite is responsible for. Bump them
+ *     as we add tests; do **not** lower without an explicit T-task.
  */
 export default defineConfig({
   plugins: [tsconfigPaths()],
@@ -31,6 +41,38 @@ export default defineConfig({
       REDIS_URL: 'redis://localhost:6379',
       AUTH_SECRET: 'vitest-secret-not-real',
       LOG_LEVEL: 'fatal',
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json-summary'],
+      reportsDirectory: './coverage',
+      // Restrict the universe to the request/response and i18n helpers that
+      // unit tests actually own. Code that lives outside this surface is
+      // covered elsewhere:
+      //   - UI components, pages, middleware  → Playwright (`apps/web/e2e/`)
+      //   - API route handlers                → Playwright + a few focused
+      //                                        `__tests__/` route specs
+      //   - `lib/openapi/*`                   → static schema definitions run
+      //                                        by `pnpm openapi:generate` and
+      //                                        diffed by `openapi:check` in CI
+      //   - `lib/queries/*`                   → React Query thin wrappers,
+      //                                        exercised by Playwright
+      // Without this scope the report would drag in untested generators and
+      // query hooks and bury real regressions in noise.
+      include: ['lib/*.ts', 'lib/i18n/**/*.ts'],
+      exclude: [
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/__tests__/**',
+        '**/__fixtures__/**',
+        '**/*.d.ts',
+      ],
+      thresholds: {
+        lines: 60,
+        statements: 60,
+        functions: 60,
+        branches: 50,
+      },
     },
   },
 });

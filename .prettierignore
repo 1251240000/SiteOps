@@ -22,3 +22,8 @@ packages/db/migrations/
 
 # Misc generated files
 *.tsbuildinfo
+
+# OpenAPI snapshot — produced verbatim by `pnpm openapi:generate` and
+# diffed against itself in CI. Prettier reformatting would just make
+# `openapi:check` flap.
+docs/openapi.json

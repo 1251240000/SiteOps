@@ -54,11 +54,36 @@ export function routeContext<T extends Record<string, string>>(params: T): { par
   return { params: Promise.resolve(params) };
 }
 
+/** Shape of the fake auth session shared across every API route test. */
+export type FakeSession = {
+  user: { id: string; email: string; name: string; role: 'admin' | 'operator' | 'viewer' };
+  expires: string;
+};
+
 /** Default authed session — admin user with `*` scope (ignored for session auth). */
-export const FAKE_SESSION = {
-  user: { id: '11111111-1111-4111-8111-111111111111', email: 'admin@test.local', name: 'Admin' },
+export const FAKE_SESSION: FakeSession = {
+  user: {
+    id: '11111111-1111-4111-8111-111111111111',
+    email: 'admin@test.local',
+    name: 'Admin',
+    role: 'admin',
+  },
   expires: new Date(Date.now() + 86_400_000).toISOString(),
 };
+
+/**
+ * Build a session for a non-admin role so tests can drive the RBAC gate in
+ * `withApi` / `withAuth` without faking a whole NextAuth callback chain.
+ *
+ * The returned object is a structural superset of `FAKE_SESSION` and is safe
+ * to feed directly into {@link setSession}.
+ */
+export function sessionForRole(role: FakeSession['user']['role']): FakeSession {
+  return {
+    ...FAKE_SESSION,
+    user: { ...FAKE_SESSION.user, role },
+  };
+}
 
 /**
  * Apply the `@/lib/auth` mock implementation. Tests that want to flip
@@ -67,7 +92,7 @@ export const FAKE_SESSION = {
  * Pre-condition: the test file must already have:
  *   `vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))`
  */
-export async function setSession(session: typeof FAKE_SESSION | null): Promise<void> {
+export async function setSession(session: FakeSession | null): Promise<void> {
   const mod = await import('@/lib/auth');
   vi.mocked(mod.auth as () => Promise<unknown>).mockResolvedValue(session);
 }

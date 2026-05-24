@@ -47,6 +47,11 @@ export const listErrorsQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+  /**
+   * Opaque base64url keyset cursor. When set, `page` is ignored and the
+   * response meta switches to `{ cursor: { next? }, hasMore }`.
+   */
+  cursor: z.string().min(1).max(512).optional(),
 });
 export type ListErrorsQuery = z.infer<typeof listErrorsQuerySchema>;
 

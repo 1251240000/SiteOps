@@ -24,6 +24,11 @@
       "dependsOn": ["^build"],
       "env": ["DATABASE_URL", "REDIS_URL", "AUTH_SECRET"]
     },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "env": ["DATABASE_URL", "REDIS_URL", "AUTH_SECRET"],
+      "outputs": ["coverage/**"]
+    },
     "i18n:check": {
       "inputs": ["messages/**/*.json", "scripts/check-i18n-keys.mjs"],
       "outputs": []

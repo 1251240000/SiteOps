@@ -56,14 +56,21 @@ export function translateFormErrors(
   t: FormErrorsT,
 ): void {
   if (!errors) return;
-  for (const value of Object.values(errors)) {
+  for (const [key, value] of Object.entries(errors)) {
+    // RHF leaf `FieldError` objects carry a `ref` pointing at the DOM input
+    // (and through it at the React fiber tree). Recursing into it would
+    // blow the stack via DOM <-> Fiber back-references.
+    if (key === 'ref') continue;
     if (!value || typeof value !== 'object') continue;
     const node = value as { message?: unknown };
     if (typeof node.message === 'string') {
       const next = translateFormError(node.message, t);
       if (next !== node.message) node.message = next;
+      // A node with a string `message` is a RHF leaf — its siblings are
+      // `type` / `ref`, never nested error subtrees.
+      continue;
     }
-    // Recurse into nested arrays / objects (zod `path: ['tags', 0]`).
+    // Nested arrays / objects (e.g. zod `path: ['tags', 0]`).
     translateFormErrors(value as Record<string, unknown>, t);
   }
 }

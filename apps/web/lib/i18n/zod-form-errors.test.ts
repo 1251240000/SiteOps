@@ -69,4 +69,22 @@ describe('translateFormErrors', () => {
   it('is a no-op when errors is undefined', () => {
     expect(() => translateFormErrors(undefined, fakeT)).not.toThrow();
   });
+
+  // Regression: real react-hook-form `FieldError` objects carry a `ref` that
+  // points back at the DOM input, which itself links to the React fiber tree.
+  // Naively recursing into `ref` blows the stack and silently kills the form
+  // `onSubmit` handler. We synthesise the cycle here so the guard rails stay
+  // honest.
+  it('does not recurse into FieldError `ref` (no stack overflow on circular DOM refs)', () => {
+    const fakeInput: Record<string, unknown> = {};
+    const fakeFiber: Record<string, unknown> = { stateNode: fakeInput };
+    fakeInput.__reactFiber = fakeFiber;
+    fakeFiber.return = fakeFiber; // cycle within the fiber tree
+
+    const errors: Record<string, unknown> = {
+      name: { type: 'too_small', message: 'required', ref: fakeInput },
+    };
+    expect(() => translateFormErrors(errors, fakeT)).not.toThrow();
+    expect((errors.name as { message: string }).message).toBe('[required]');
+  });
 });

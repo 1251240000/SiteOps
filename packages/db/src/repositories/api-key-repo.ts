@@ -41,6 +41,7 @@ const SAFE_COLUMNS = {
   name: apiKeys.name,
   keyPrefix: apiKeys.keyPrefix,
   scopes: apiKeys.scopes,
+  rateLimitPerMin: apiKeys.rateLimitPerMin,
   lastUsedAt: apiKeys.lastUsedAt,
   expiresAt: apiKeys.expiresAt,
   revokedAt: apiKeys.revokedAt,
@@ -135,6 +136,24 @@ export const apiKeyRepo = {
     // Either the id is unknown OR the row was already revoked. Surface the
     // current state regardless so the route can render an idempotent response.
     return this.getById(db, id);
+  },
+
+  /**
+   * Update mutable fields on an active key. Currently the only mutable field
+   * is `rate_limit_per_min`; pass `null` to clear the override (key falls
+   * back to the env default). Refuses to update revoked rows.
+   */
+  async updateRateLimit(
+    db: Db,
+    id: string,
+    rateLimitPerMin: number | null,
+  ): Promise<ApiKeyView | null> {
+    const rows = await db
+      .update(apiKeys)
+      .set({ rateLimitPerMin })
+      .where(and(eq(apiKeys.id, id), isNull(apiKeys.revokedAt)))
+      .returning(SAFE_COLUMNS);
+    return rows[0] ?? null;
   },
 
   /** Count of active (non-revoked, non-expired) keys. Used for the {API_KEY_MAX_ACTIVE} cap. */

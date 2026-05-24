@@ -85,6 +85,19 @@ const optionalString = (max: number) =>
     .transform((v) => (v.length === 0 ? undefined : v))
     .optional();
 
+/**
+ * Optional URL field whose empty-string form-input value is normalised to
+ * `undefined` *before* the URL validator runs. Without this preprocess the
+ * `.optional()` wrapper only excuses `undefined` — an empty `<input>` would
+ * still flunk `.url()` and surface "must be a valid URL" against a field
+ * the operator did not touch.
+ */
+const optionalUrl = () =>
+  z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    urlSchema.optional(),
+  );
+
 /** Body shape for `POST /api/v1/sites`. */
 export const createSiteSchema = z.object({
   name: z.string().trim().min(1, 'required').max(80),
@@ -99,7 +112,7 @@ export const createSiteSchema = z.object({
   targetCountry: optionalString(8),
   targetLanguage: optionalString(16),
   techStack: techStackSchema,
-  repoUrl: urlSchema.optional(),
+  repoUrl: optionalUrl(),
   repoProvider: repoProviderSchema.optional(),
   cfAccountId: optionalString(64),
   cfPagesProject: optionalString(80),

@@ -1,5 +1,4 @@
-import { pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
-
+import { pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, updatedAt } from './_helpers.js';
 
 export const users = pgTable(
@@ -9,6 +8,11 @@ export const users = pgTable(
     email: text('email').notNull(),
     passwordHash: text('password_hash').notNull(),
     name: text('name'),
+    role: text('role').notNull().default('admin'),
+    status: text('status').notNull().default('active'),
+    invitedBy: uuid('invited_by'),
+    invitedAt: timestamp('invited_at', { withTimezone: true, mode: 'date' }),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true, mode: 'date' }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

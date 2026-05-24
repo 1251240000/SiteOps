@@ -2,7 +2,7 @@ import { type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { uptime as uptimeSvc } from '@siteops/services';
-import { AppError, siteIdParamSchema } from '@siteops/shared';
+import { AppError, decodeCursor, siteIdParamSchema } from '@siteops/shared';
 
 import { getDb } from '@/lib/db';
 import { ok, withAuth } from '@/lib/with-api';
@@ -23,6 +23,14 @@ const querySchema = z.object({
     .optional(),
   granularity: z.enum(['5m', '1h', '1d']).optional(),
   limitFailures: z.coerce.number().int().min(1).max(100).optional(),
+  /**
+   * Cursor-paginated list mode (T36). When set, the response shape
+   * collapses to `{ items: UptimeCheck[] }` and the chart aggregations
+   * are skipped to keep follow-up pages cheap.
+   */
+  cursor: z.string().min(1).max(512).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  failuresOnly: z.enum(['true', 'false']).optional(),
 });
 
 /**
@@ -30,6 +38,12 @@ const querySchema = z.object({
  *
  * Default window is the last 24 hours at 5-minute granularity; pass
  * `?windowHours=168&granularity=1h` for the 7-day view.
+ *
+ * Pagination (T36): when `?cursor=...` is supplied, the route switches
+ * to a tail-list mode that returns `{ items: UptimeCheck[] }` plus
+ * `meta.cursor.next` / `meta.hasMore` / `meta.limit`. The aggregate
+ * shape (summary/series/recentFailures) is preserved for all calls that
+ * do not set `cursor`.
  */
 export function GET(req: NextRequest, routeCtx: RouteContext) {
   return withAuth(
@@ -57,6 +71,33 @@ export function GET(req: NextRequest, routeCtx: RouteContext) {
         });
       }
 
+      const deps = { db: getDb(), logger: apiCtx.logger };
+
+      // Cursor mode short-circuits all aggregate work.
+      if (q.data.cursor) {
+        const cursor = decodeCursor(q.data.cursor);
+        if (!cursor) {
+          throw new AppError('Invalid cursor', {
+            code: 'validation_failed',
+            status: 400,
+            details: { cursor: 'malformed or expired' },
+          });
+        }
+        const failuresOnly = q.data.failuresOnly === 'true';
+        const page = await uptimeSvc.uptimeService.listChecksCursor(deps, parsed.data.id, {
+          cursor,
+          limit: q.data.limit,
+          failuresOnly,
+        });
+        return ok(page.items, {
+          meta: {
+            cursor: { next: page.nextCursor },
+            hasMore: page.hasMore,
+            limit: page.limit,
+          },
+        });
+      }
+
       const to = q.data.to ? new Date(q.data.to) : new Date();
       const from = q.data.from
         ? new Date(q.data.from)
@@ -64,7 +105,6 @@ export function GET(req: NextRequest, routeCtx: RouteContext) {
       const granularity =
         q.data.granularity ??
         (to.getTime() - from.getTime() > 7 * 24 * 60 * 60 * 1000 ? '1d' : '5m');
-      const deps = { db: getDb(), logger: apiCtx.logger };
 
       const [summary, series, recentFailures] = await Promise.all([
         uptimeSvc.uptimeService.summary(deps, parsed.data.id, to.getTime() - from.getTime()),

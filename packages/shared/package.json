@@ -41,7 +41,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -52,6 +53,7 @@
     "@siteops/eslint-config": "workspace:*",
     "@siteops/tsconfig": "workspace:*",
     "@types/node": "^20.16.13",
+    "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9.13.0",
     "typescript": "^5.6.3",
     "vitest": "^3.2.4"

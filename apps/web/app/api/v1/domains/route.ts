@@ -72,5 +72,5 @@ export const POST = withAuth(
     );
     return ok(domain, { status: 201 });
   },
-  { scopes: ['domains:write'] },
+  { scopes: ['domains:write'], permission: 'domains.write' },
 );

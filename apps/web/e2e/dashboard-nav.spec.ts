@@ -54,9 +54,33 @@ const PAGES: Array<{ path: string; heading: RegExp }> = [
   { path: '/settings', heading: /^settings$/i },
 ];
 
-test('every primary dashboard page renders its heading without a console error', async ({
+test('@smoke every primary dashboard page renders its heading without a console error', async ({
   page,
 }) => {
+  // T33 — wire up CSP-violation collection BEFORE we navigate so we don't
+  // miss reports on the very first paint. The page may report violations
+  // even in `Content-Security-Policy-Report-Only` mode (which is what dev
+  // publishes); collecting them here lets us fail loudly if a future
+  // refactor introduces an inline script that we forgot to whitelist.
+  const cspViolations: string[] = [];
+  await page.exposeFunction('__siteopsCspViolation', (msg: string) => {
+    cspViolations.push(msg);
+  });
+  await page.addInitScript(() => {
+    document.addEventListener('securitypolicyviolation', (e) => {
+      // `eval` violations are emitted by Next.js / Turbopack's dev runtime
+      // for HMR module factories. Production builds don't need `eval`, and
+      // adding `'unsafe-eval'` to the policy would defeat its purpose, so
+      // we ignore that one signature when running against `next dev`.
+      if (e.blockedURI === 'eval') return;
+      const detail = `${e.violatedDirective} blocked ${e.blockedURI || '(inline)'}`;
+      const reporter = (window as unknown as Record<string, (m: string) => void>)[
+        '__siteopsCspViolation'
+      ];
+      reporter?.(detail);
+    });
+  });
+
   await signIn(page);
 
   const consoleErrors: string[] = [];
@@ -79,5 +103,12 @@ test('every primary dashboard page renders its heading without a console error',
   expect(
     consoleErrors,
     `unexpected console.error during nav smoke:\n${consoleErrors.join('\n')}`,
+  ).toEqual([]);
+
+  // CSP violations always fail the suite — they signal a hole in
+  // `applySecurityHeaders` or new inline content the layout introduced.
+  expect(
+    cspViolations,
+    `unexpected CSP violations during nav smoke:\n${cspViolations.join('\n')}`,
   ).toEqual([]);
 });

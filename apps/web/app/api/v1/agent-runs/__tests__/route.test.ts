@@ -241,6 +241,116 @@ describe('GET /api/v1/agent-runs', () => {
   });
 });
 
+describe('GET /api/v1/agent-runs — cursor pagination (T36)', () => {
+  it('keeps the legacy ?page envelope and exposes a forward cursor', async () => {
+    const key = await seedApiKey(['errors:write']);
+    for (let i = 0; i < 3; i++) {
+      await reportError(
+        await buildRequest('http://localhost/api/v1/errors', {
+          method: 'POST',
+          body: {
+            siteId: await seedSite(`legacy-${i}`),
+            source: 'js',
+            level: 'error',
+            message: 'x',
+          },
+          headers: { authorization: `Bearer ${key}` },
+        }),
+      );
+    }
+    await waitForAuditRows(3);
+
+    const res = await listAgentRuns(
+      await buildRequest('http://localhost/api/v1/agent-runs?page=1&limit=2'),
+    );
+    const body = await readJson<{
+      data: AgentRunRow[];
+      meta: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+        cursor: { next: string | null };
+        hasMore: boolean;
+      };
+    }>(res);
+    expect(res.status).toBe(200);
+    expect(body.meta.page).toBe(1);
+    expect(body.meta.total).toBe(3);
+    expect(body.meta.totalPages).toBe(2);
+    expect(body.meta.hasMore).toBe(true);
+    expect(body.meta.cursor.next).toBeTypeOf('string');
+    expect(body.data).toHaveLength(2);
+  });
+
+  it('switches to keyset envelope when ?cursor=... is supplied and walks the rest', async () => {
+    const key = await seedApiKey(['errors:write']);
+    // 4 successful reports → 4 audit rows.
+    for (let i = 0; i < 4; i++) {
+      await reportError(
+        await buildRequest('http://localhost/api/v1/errors', {
+          method: 'POST',
+          body: { siteId: await seedSite(`cur-${i}`), source: 'js', level: 'error', message: 'm' },
+          headers: { authorization: `Bearer ${key}` },
+        }),
+      );
+    }
+    await waitForAuditRows(4);
+
+    const page1Res = await listAgentRuns(
+      await buildRequest('http://localhost/api/v1/agent-runs?limit=2'),
+    );
+    const page1 = await readJson<{
+      data: AgentRunRow[];
+      meta: { cursor: { next: string | null }; hasMore: boolean };
+    }>(page1Res);
+    expect(page1.data).toHaveLength(2);
+    expect(page1.meta.hasMore).toBe(true);
+    expect(page1.meta.cursor.next).toBeTypeOf('string');
+
+    const next = page1.meta.cursor.next!;
+    const page2Res = await listAgentRuns(
+      await buildRequest(
+        `http://localhost/api/v1/agent-runs?cursor=${encodeURIComponent(next)}&limit=2`,
+      ),
+    );
+    expect(page2Res.status).toBe(200);
+    const page2 = await readJson<{
+      data: AgentRunRow[];
+      meta: {
+        cursor: { next: string | null };
+        hasMore: boolean;
+        limit: number;
+        // Cursor mode MUST NOT carry the offset legacy keys.
+        page?: number;
+        total?: number;
+        totalPages?: number;
+      };
+    }>(page2Res);
+    expect(page2.data).toHaveLength(2);
+    expect(page2.meta.hasMore).toBe(false);
+    expect(page2.meta.cursor.next).toBeNull();
+    expect(page2.meta.limit).toBe(2);
+    // Cursor-mode meta is clean — no offset bookkeeping leaks through.
+    expect(page2.meta.page).toBeUndefined();
+    expect(page2.meta.total).toBeUndefined();
+    expect(page2.meta.totalPages).toBeUndefined();
+
+    // No id overlap between page 1 and page 2.
+    const overlap = new Set([...page1.data.map((r) => r.id), ...page2.data.map((r) => r.id)]);
+    expect(overlap.size).toBe(4);
+  });
+
+  it('400s on a malformed cursor', async () => {
+    const res = await listAgentRuns(
+      await buildRequest('http://localhost/api/v1/agent-runs?cursor=!!!not-base64!!!'),
+    );
+    expect(res.status).toBe(400);
+    const body = await readJson<{ error: { code: string } }>(res);
+    expect(body.error.code).toBe('validation_failed');
+  });
+});
+
 describe('GET /api/v1/agent-runs/:id', () => {
   it('returns the row with full input/output', async () => {
     const siteId = await seedSite('detail-target');

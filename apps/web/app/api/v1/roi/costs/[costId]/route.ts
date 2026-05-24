@@ -50,7 +50,7 @@ export function PATCH(req: NextRequest, routeCtx: RouteContext) {
       );
       return ok(updated);
     },
-    { scopes: ['metrics:write'] },
+    { scopes: ['metrics:write'], permission: 'roi.write' },
   )(req);
 }
 
@@ -62,6 +62,6 @@ export function DELETE(req: NextRequest, routeCtx: RouteContext) {
       await roiSvc.roiService.deleteSiteCost({ db: getDb(), logger: ctx.logger }, id);
       return ok({ id });
     },
-    { scopes: ['metrics:write'] },
+    { scopes: ['metrics:write'], permission: 'roi.write' },
   )(req);
 }

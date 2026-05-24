@@ -1,0 +1,235 @@
+name: Release
+
+# T50 — tag-driven container release.
+#
+# Trigger: push of a SemVer tag (`v0.1.0`, `v0.1.0-rc.1`, ...). The workflow
+# builds multi-arch (linux/amd64 + linux/arm64) Docker images for both
+# `apps/web` and `apps/worker`, pushes them to GHCR, and cuts a GitHub
+# Release with auto-generated notes.
+#
+# Workflow contract:
+#   1. CI must already be green on the commit being tagged. We do **not**
+#      re-run the test suite here — that's `ci.yml`'s job. This workflow's
+#      job is "build the images that match the tag".
+#   2. Images are pushed to:
+#        ghcr.io/<owner>/siteops-web:<tag>      ghcr.io/<owner>/siteops-web:latest
+#        ghcr.io/<owner>/siteops-worker:<tag>   ghcr.io/<owner>/siteops-worker:latest
+#      (`<owner>` resolves to the repository owner, lowercased).
+#   3. `:latest` is **only** updated when the tag is a clean SemVer (no `-rc`,
+#      `-beta`, etc.) so prereleases don't accidentally become the default
+#      pull tag.
+#   4. The GitHub Release is created with `generate_release_notes: true`,
+#      which uses GitHub's auto-changelog (PR titles + labels between this
+#      tag and the previous one).
+#
+# Manual run: `workflow_dispatch` lets ops re-build a specific tag if the
+# original run was killed mid-push (idempotent — Buildx will skip layers it
+# already wrote and `latest` is overwritten by spec).
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to (re-)build, e.g. v0.1.0. Must already exist.'
+        required: true
+        type: string
+
+concurrency:
+  # Two pushes of the same tag should never race — only the latest one wins.
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  # Needs `packages: write` to push to GHCR; `contents: write` to create the
+  # GitHub Release object. Everything else stays at the read default.
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  build-and-push:
+    name: build → GHCR (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    # One job per image so they push in parallel. `fail-fast: false` lets the
+    # other one finish even if the first fails — useful when triaging which
+    # Dockerfile is broken.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: siteops-web
+            dockerfile: infra/Dockerfile.web
+          - image: siteops-worker
+            dockerfile: infra/Dockerfile.worker
+
+    steps:
+      - name: Resolve target ref
+        id: target
+        # `workflow_dispatch` checks out a user-supplied tag; the normal
+        # `push` path uses the ref that triggered the run.
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "ref=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.ref }}
+          # Full history so action-gh-release can build a changelog between
+          # this tag and the previous one.
+          fetch-depth: 0
+
+      - name: Lower-case repository owner
+        # GHCR rejects mixed-case namespace. Most repos already match, but
+        # `${{ github.repository_owner }}` preserves case as-is.
+        id: owner
+        run: |
+          echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether to update `:latest`
+        id: latest
+        # Only stable releases (no `-rc`, `-beta`, etc.) get pinned as :latest.
+        run: |
+          ref="${{ steps.target.outputs.ref }}"
+          if echo "$ref" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "flag=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up QEMU
+        # Required to cross-build linux/arm64 from the linux/amd64 runner.
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # `GITHUB_TOKEN` has packages:write because of the job-level perms.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: meta
+        # docker/metadata-action handles the `:latest` flip for us, but we
+        # already decided that above and prefer being explicit so the tag
+        # set is obvious from a single `docker buildx ...` log line.
+        run: |
+          ref="${{ steps.target.outputs.ref }}"
+          base="${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image }}"
+          tags="$base:$ref"
+          if [ "${{ steps.latest.outputs.flag }}" = "true" ]; then
+            tags="$tags,$base:latest"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build & push (${{ matrix.image }})
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          # Buildx will pull a multi-platform manifest; both archs end up
+          # under the same tag, so consumers don't have to pick.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          # OCI labels make the image discoverable from the GHCR UI.
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.target.outputs.ref }}
+            org.opencontainers.image.licenses=UNLICENSED
+          # GitHub Actions cache is the cheapest layer cache for cross-arch
+          # Buildx — no separate registry, no third-party auth.
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+          # CN mirrors are baked into the Dockerfile defaults; override at
+          # release time so the published image pulls upstream npm + Alpine
+          # mirrors that GitHub-hosted runners can reach without latency.
+          build-args: |
+            ALPINE_MIRROR=https://dl-cdn.alpinelinux.org/alpine
+            NPM_REGISTRY=https://registry.npmjs.org
+
+      - name: Smoke-pull image after push
+        # Sanity check — pull the freshly-pushed manifest from GHCR to make
+        # sure the digest landed and the multi-arch index is consistent.
+        run: |
+          docker buildx imagetools inspect \
+            "${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image }}:${{ steps.target.outputs.ref }}"
+
+  github-release:
+    name: github release
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Resolve target ref
+        id: target
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "ref=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect prerelease
+        id: pre
+        run: |
+          ref="${{ steps.target.outputs.ref }}"
+          if echo "$ref" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "flag=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.ref }}
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        # `generate_release_notes: true` asks GitHub to auto-render a diff of
+        # PRs / commits since the previous tag. We always create the release
+        # so a tag never sits in GHCR without a corresponding GH Release page.
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.target.outputs.ref }}
+          name: ${{ steps.target.outputs.ref }}
+          generate_release_notes: true
+          prerelease: ${{ steps.pre.outputs.flag }}
+          # Release body is auto-generated; the prefix below points readers
+          # at the freshly-published images so ops can copy-paste straight
+          # into `docker compose pull`.
+          body: |
+            ## Container images
+
+            - `ghcr.io/${{ github.repository_owner }}/siteops-web:${{ steps.target.outputs.ref }}`
+            - `ghcr.io/${{ github.repository_owner }}/siteops-worker:${{ steps.target.outputs.ref }}`
+
+            Both images are published as a multi-arch manifest covering
+            `linux/amd64` and `linux/arm64`. See `docs/13-release.md` for the
+            full deploy runbook.
+
+            ---

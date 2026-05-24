@@ -86,6 +86,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Container-level healthcheck stays on /healthz (liveness): Docker uses
+    # this to decide whether to restart the container, and we don't want a
+    # transient DB/Redis blip to trip the restart loop. Caddy's upstream
+    # health probe is the one that uses /readyz (see infra/caddy/Caddyfile).
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:3000/healthz || exit 1']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     expose:
       - '3000'
     networks:
@@ -135,6 +145,37 @@ services:
     networks:
       - siteops-net
 
+  # T49 — Daily pg_dump sidecar. Opt-in via the `backup` profile so a
+  # plain `docker compose up -d` doesn't pin an extra container in stacks
+  # that prefer to back up via another mechanism (managed PG, snapshots,
+  # pgbackrest, ...). Operational runbook: docs/12-backup-restore.md.
+  postgres-backup:
+    image: postgres:16-alpine
+    container_name: siteops-postgres-backup
+    profiles: [backup]
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-siteops}
+      POSTGRES_DB: ${POSTGRES_DB:-siteops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      BACKUP_DIR: /backups
+      KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_CRON: ${BACKUP_CRON:-0 2 * * *}
+      BACKUP_RUN_ON_BOOT: ${BACKUP_RUN_ON_BOOT:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backup/backup.sh:/usr/local/bin/backup.sh:ro
+      - ./backup/restore.sh:/usr/local/bin/restore.sh:ro
+      - ./backup/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+      - pg-backup:/backups
+    entrypoint: ['/bin/sh', '/usr/local/bin/entrypoint.sh']
+    networks:
+      - siteops-net
+
 volumes:
   pg-data:
   redis-data:
@@ -142,6 +183,7 @@ volumes:
   caddy-config:
   lighthouse-data:
   audit-data:
+  pg-backup:
 
 networks:
   siteops-net:

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { parseAsStringLiteral, useQueryState } from 'nuqs';
 import { useState } from 'react';
@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -65,6 +67,8 @@ export function ApiKeysTable() {
     parseAsStringLiteral(STATE_VALUES).withDefault('all'),
   );
   const [confirmRow, setConfirmRow] = useState<ApiKeyRow | null>(null);
+  const [editRow, setEditRow] = useState<ApiKeyRow | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const filter: ApiKeyState | undefined = state === 'all' ? undefined : state;
 
@@ -85,6 +89,42 @@ export function ApiKeysTable() {
     onError: (err) => toast.error(err.message || t('table.revokeFailed')),
     onSettled: () => setConfirmRow(null),
   });
+
+  const updateRate = useMutation<
+    ApiSuccess<ApiKeyRow>,
+    ApiError,
+    { id: string; rateLimitPerMin: number | null }
+  >({
+    mutationFn: ({ id, rateLimitPerMin }) =>
+      api.patch<ApiKeyRow>(`/settings/api-keys/${id}`, { rateLimitPerMin }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: apiKeysKeys.lists() });
+      toast.success(t('table.rateLimitUpdatedToast'));
+    },
+    onError: (err) => toast.error(err.message || t('table.rateLimitUpdateFailed')),
+    onSettled: () => setEditRow(null),
+  });
+
+  function openEdit(row: ApiKeyRow): void {
+    setEditRow(row);
+    setEditValue(row.rateLimitPerMin === null ? '' : String(row.rateLimitPerMin));
+  }
+
+  function submitEdit(): void {
+    if (!editRow) return;
+    const trimmed = editValue.trim();
+    if (trimmed === '') {
+      // Empty input clears the override → fall back to env default.
+      updateRate.mutate({ id: editRow.id, rateLimitPerMin: null });
+      return;
+    }
+    const n = Number(trimmed);
+    if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
+      toast.error(t('table.rateLimitInvalid'));
+      return;
+    }
+    updateRate.mutate({ id: editRow.id, rateLimitPerMin: n });
+  }
 
   const items = data?.data ?? [];
 
@@ -112,11 +152,12 @@ export function ApiKeysTable() {
               <th className="px-4 py-3 text-left font-medium">{t('table.colName')}</th>
               <th className="px-4 py-3 text-left font-medium">{t('table.colPrefix')}</th>
               <th className="px-4 py-3 text-left font-medium">{t('table.colScopes')}</th>
+              <th className="px-4 py-3 text-left font-medium">{t('table.colRateLimit')}</th>
               <th className="px-4 py-3 text-left font-medium">{t('table.colState')}</th>
               <th className="px-4 py-3 text-left font-medium">{t('table.colLastUsed')}</th>
               <th className="px-4 py-3 text-left font-medium">{t('table.colCreated')}</th>
               <th className="px-4 py-3 text-right font-medium">
-                <span className="sr-only">{t('table.revoke')}</span>
+                <span className="sr-only">{t('table.actionsAriaLabel')}</span>
               </th>
             </tr>
           </thead>
@@ -124,7 +165,7 @@ export function ApiKeysTable() {
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <tr key={i}>
-                  {Array.from({ length: 7 }).map((__, j) => (
+                  {Array.from({ length: 8 }).map((__, j) => (
                     <td key={j} className="px-4 py-3">
                       <Skeleton className="h-4 w-full" />
                     </td>
@@ -133,13 +174,13 @@ export function ApiKeysTable() {
               ))
             ) : error ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-destructive">
+                <td colSpan={8} className="px-4 py-10 text-center text-destructive">
                   {error.message || t('table.loadFailed')}
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
                   {t('table.empty')}
                 </td>
               </tr>
@@ -161,6 +202,11 @@ export function ApiKeysTable() {
                         ))}
                       </div>
                     </td>
+                    <td className="px-4 py-3 align-middle text-muted-foreground">
+                      {r.rateLimitPerMin === null
+                        ? t('table.rateLimitDefault')
+                        : t('table.rateLimitValue', { value: r.rateLimitPerMin })}
+                    </td>
                     <td className="px-4 py-3 align-middle">
                       <Badge variant={STATE_BADGE[s]} className="capitalize">
                         {t(`table.state.${s}`)}
@@ -174,15 +220,26 @@ export function ApiKeysTable() {
                     </td>
                     <td className="px-4 py-3 text-right align-middle">
                       {s === 'active' ? (
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          aria-label={t('table.revoke')}
-                          onClick={() => setConfirmRow(r)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={t('table.editRateLimit')}
+                            onClick={() => openEdit(r)}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={t('table.revoke')}
+                            onClick={() => setConfirmRow(r)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
                       ) : null}
                     </td>
                   </tr>
@@ -215,6 +272,43 @@ export function ApiKeysTable() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {t('table.confirmRevoke')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={editRow !== null}
+        onOpenChange={(o) => {
+          if (!o) setEditRow(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('table.editRateLimitTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('table.editRateLimitDescription', { name: editRow?.name ?? '' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="api-key-rate-limit-edit">{t('table.editRateLimitLabel')}</Label>
+            <Input
+              id="api-key-rate-limit-edit"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={100000}
+              step={1}
+              value={editValue}
+              placeholder={t('table.editRateLimitPlaceholder')}
+              onChange={(e) => setEditValue(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">{t('table.editRateLimitHint')}</p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('table.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={submitEdit} disabled={updateRate.isPending}>
+              {t('table.editRateLimitSubmit')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

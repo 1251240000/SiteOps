@@ -17,6 +17,10 @@
       "next": "Next page",
       "page": "Page <strong>{page}</strong> of <strong>{total}</strong>",
       "showing": "Showing {from}–{to} of {total}",
+      "showingCount": "{count, plural, =0 {No rows loaded} =1 {1 row loaded} other {# rows loaded}}",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "endOfResults": "End of results",
       "noRows": "No rows"
     },
     "sortBy": "Sort by {column}",
@@ -99,7 +103,22 @@
     "submitting": "Signing in…",
     "errorInvalid": "Invalid email or password.",
     "errorGeneric": "Unable to sign in. Please try again.",
-    "formAriaLabel": "Sign in"
+    "formAriaLabel": "Sign in",
+    "invite": {
+      "title": "Accept invitation",
+      "description": "Set your name and password to finish creating your account.",
+      "name": "Display name",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "errorPasswordShort": "Password must be at least 8 characters.",
+      "errorPasswordMismatch": "Passwords do not match.",
+      "errorInvalidToken": "This invitation link is invalid or has expired. Ask the admin who invited you to send a new one.",
+      "errorEmailExists": "An account with this email already exists. Try signing in instead.",
+      "errorGeneric": "We couldn't accept this invitation. Please try again.",
+      "formAriaLabel": "Accept invitation"
+    }
   },
   "nav": {
     "overview": "Overview",
@@ -116,6 +135,7 @@
     "tasks": "Tasks",
     "webhooks": "Webhooks",
     "apiKeys": "API keys",
+    "users": "Team",
     "settings": "Settings",
     "sectionsAriaLabel": "Sections",
     "breadcrumbAriaLabel": "Breadcrumb"
@@ -927,6 +947,9 @@
         "scopesRequired": "Pick at least one scope.",
         "expiresAtLabel": "Expires at",
         "expiresAtHint": "Leave blank for never. Local time; converted to UTC on save.",
+        "rateLimitLabel": "Rate limit (per minute)",
+        "rateLimitPlaceholder": "e.g. 60 (leave blank for default)",
+        "rateLimitHint": "Optional override of the global default. Leave blank to use it.",
         "submit": "Create",
         "cancel": "Cancel",
         "errorGeneric": "Failed to create API key.",
@@ -942,10 +965,24 @@
         "colName": "Name",
         "colPrefix": "Prefix",
         "colScopes": "Scopes",
+        "colRateLimit": "Rate limit",
         "colState": "State",
         "colLastUsed": "Last used",
         "colCreated": "Created",
+        "actionsAriaLabel": "Row actions",
         "revoke": "Revoke",
+        "editRateLimit": "Edit rate limit",
+        "rateLimitDefault": "Default",
+        "rateLimitValue": "{value}/min",
+        "rateLimitUpdatedToast": "Rate limit updated",
+        "rateLimitUpdateFailed": "Failed to update rate limit",
+        "rateLimitInvalid": "Rate limit must be a positive integer.",
+        "editRateLimitTitle": "Edit rate limit",
+        "editRateLimitDescription": "Change the per-minute budget for “{name}”. Leave blank to fall back to the global default.",
+        "editRateLimitLabel": "Rate limit (per minute)",
+        "editRateLimitPlaceholder": "e.g. 60",
+        "editRateLimitHint": "Empty input clears the override and restores the env default.",
+        "editRateLimitSubmit": "Save",
         "empty": "No API keys match this filter.",
         "loadFailed": "Failed to load API keys.",
         "revokedToast": "Key revoked",
@@ -960,6 +997,75 @@
           "revoked": "Revoked",
           "expired": "Expired"
         }
+      }
+    },
+    "users": {
+      "title": "Team",
+      "description": "Invite teammates and manage their roles. Admins have full access; operators can read & write most resources but cannot manage team or API keys; viewers are read-only.",
+      "roles": {
+        "admin": "Admin",
+        "operator": "Operator",
+        "viewer": "Viewer"
+      },
+      "statuses": {
+        "active": "Active",
+        "suspended": "Suspended"
+      },
+      "table": {
+        "colEmail": "Email",
+        "colName": "Name",
+        "colRole": "Role",
+        "colStatus": "Status",
+        "colLastLogin": "Last login",
+        "colCreated": "Created",
+        "actionsAriaLabel": "Row actions",
+        "editRole": "Edit role",
+        "suspend": "Suspend",
+        "reactivate": "Reactivate",
+        "editRoleTitle": "Change role",
+        "editRoleDescription": "Update the role for “{email}”. Self-modification is blocked.",
+        "editRoleLabel": "Role",
+        "save": "Save",
+        "cancel": "Cancel",
+        "suspendTitle": "Suspend this user?",
+        "suspendDescription": "“{email}” will no longer be able to sign in. You can reactivate them at any time.",
+        "confirmSuspend": "Suspend",
+        "reactivateTitle": "Reactivate this user?",
+        "reactivateDescription": "“{email}” will regain access using their existing password.",
+        "confirmReactivate": "Reactivate",
+        "updatedToast": "User updated",
+        "updateFailed": "Failed to update user",
+        "empty": "No team members yet — invite someone to get started.",
+        "loadFailed": "Failed to load team members."
+      },
+      "invite": {
+        "triggerLabel": "Invite user",
+        "formTitle": "Invite a teammate",
+        "formDescription": "We'll mint a single-use link valid for 7 days. Email delivery isn't wired up yet — copy the link and share it manually.",
+        "emailLabel": "Email",
+        "roleLabel": "Role",
+        "role": {
+          "admin": "Admin",
+          "operator": "Operator",
+          "viewer": "Viewer"
+        },
+        "roleHint": {
+          "admin": "Full access, including team management and API keys.",
+          "operator": "Read & write most resources; can't manage team or API keys.",
+          "viewer": "Read-only access."
+        },
+        "submit": "Create invitation",
+        "cancel": "Cancel",
+        "errorEmailRequired": "Email is required.",
+        "errorGeneric": "Failed to create invitation.",
+        "issuedTitle": "Invitation created",
+        "issuedDescription": "Share the link below with the new teammate. They'll set their own password.",
+        "inviteUrlLabel": "Invitation link",
+        "copyAria": "Copy invitation link",
+        "copiedToast": "Link copied to clipboard",
+        "copyFailed": "Failed to copy — select & copy manually.",
+        "expiresHint": "Expires {date}.",
+        "done": "Done"
       }
     },
     "agentRuns": {

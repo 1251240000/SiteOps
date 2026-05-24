@@ -1,0 +1,289 @@
+name: DB Backup / Restore Drill
+
+# T49 — exercises infra/backup/{backup.sh,restore.sh} against a real
+# Postgres 16 instance on every push to `main`, nightly, and on demand.
+# Goal: detect the day a migration starts producing a schema that
+# pg_dump/pg_restore can't round trip cleanly.
+#
+# Runs independently of the main CI pipeline so a flake here doesn't
+# block PRs (and so the schedule trigger doesn't double-bill).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/backup/**'
+      - 'infra/docker-compose.yml'
+      - 'packages/db/migrations/**'
+      - 'packages/db/src/scripts/**'
+      - '.github/workflows/db-backup-restore.yml'
+  schedule:
+    # 04:00 UTC daily — off-peak, after CI/E2E nightly runs.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: db-backup-restore-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    name: backup → wipe → restore → verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: siteops
+          POSTGRES_USER: siteops
+          POSTGRES_PASSWORD: siteops-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U siteops -d siteops"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      NODE_ENV: test
+      CI: 'true'
+      # @siteops/db scripts (db:migrate / db:seed) read this.
+      DATABASE_URL: postgres://siteops:siteops-ci@localhost:5432/siteops
+      # infra/backup/*.sh read these.
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: '5432'
+      POSTGRES_USER: siteops
+      POSTGRES_DB: siteops
+      POSTGRES_PASSWORD: siteops-ci
+      KEEP_DAYS: '14'
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: ChangeMe123!
+      # Satisfy any downstream env validators that might be touched
+      # transitively by db:seed / db:migrate.
+      AUTH_SECRET: ci-only-do-not-trust
+      TURBO_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies (db package only)
+        # db:migrate / db:seed only need @siteops/db and its workspace deps.
+        # Filtering keeps the workflow under ~3 minutes.
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply DB migrations
+        run: pnpm --filter @siteops/db db:migrate
+
+      - name: Seed admin user
+        run: pnpm --filter @siteops/db db:seed
+
+      - name: Prepare backup directory
+        id: prep
+        run: |
+          set -eu
+          BACKUP_HOST_DIR="${GITHUB_WORKSPACE}/.pg-backups"
+          mkdir -p "$BACKUP_HOST_DIR"
+          chmod 0777 "$BACKUP_HOST_DIR"   # the container's postgres user writes here
+          echo "host_dir=$BACKUP_HOST_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Insert sentinel rows + capture pre-backup counts
+        id: counts
+        run: |
+          set -eu
+          docker run --rm --network host \
+            -e PGPASSWORD="$POSTGRES_PASSWORD" \
+            postgres:16-alpine \
+            psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+                 -v ON_ERROR_STOP=1 -c "
+              INSERT INTO sites (slug, name, primary_url, site_type) VALUES
+                ('backup-sentinel-a', 'Backup Sentinel A', 'https://a.example.com', 'tool'),
+                ('backup-sentinel-b', 'Backup Sentinel B', 'https://b.example.com', 'content'),
+                ('backup-sentinel-c', 'Backup Sentinel C', 'https://c.example.com', 'directory');
+            "
+
+          sentinel_sites=$(docker run --rm --network host \
+            -e PGPASSWORD="$POSTGRES_PASSWORD" \
+            postgres:16-alpine \
+            psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+                 -tAc "SELECT count(*) FROM sites WHERE slug LIKE 'backup-sentinel-%'")
+          users_total=$(docker run --rm --network host \
+            -e PGPASSWORD="$POSTGRES_PASSWORD" \
+            postgres:16-alpine \
+            psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+                 -tAc "SELECT count(*) FROM users")
+
+          echo "sentinel_sites=$sentinel_sites" >> "$GITHUB_OUTPUT"
+          echo "users_total=$users_total"      >> "$GITHUB_OUTPUT"
+          echo "pre-backup: sentinel_sites=$sentinel_sites users_total=$users_total"
+
+          if [ "$sentinel_sites" != "3" ]; then
+            echo "::error::expected 3 sentinel sites after insert, got $sentinel_sites"
+            exit 1
+          fi
+
+      - name: Run backup.sh inside postgres:16-alpine sidecar
+        run: |
+          set -eu
+          docker run --rm --network host \
+            -e POSTGRES_HOST -e POSTGRES_PORT \
+            -e POSTGRES_USER -e POSTGRES_DB \
+            -e POSTGRES_PASSWORD \
+            -e BACKUP_DIR=/backups \
+            -e KEEP_DAYS \
+            -v "${{ steps.prep.outputs.host_dir }}:/backups" \
+            -v "${{ github.workspace }}/infra/backup/backup.sh:/usr/local/bin/backup.sh:ro" \
+            postgres:16-alpine \
+            sh /usr/local/bin/backup.sh
+
+      - name: Verify backup file was written
+        run: |
+          set -eu
+          ls -lh "${{ steps.prep.outputs.host_dir }}"
+          COUNT=$(find "${{ steps.prep.outputs.host_dir }}" -maxdepth 1 -type f -name 'siteops-*.dump' | wc -l)
+          if [ "$COUNT" -lt 1 ]; then
+            echo "::error::no siteops-*.dump produced"
+            exit 1
+          fi
+          # No .partial leftovers
+          if find "${{ steps.prep.outputs.host_dir }}" -name '*.partial' | grep -q . ; then
+            echo "::error::partial dump file leaked"
+            exit 1
+          fi
+
+      - name: Simulate data loss (drop public schema)
+        run: |
+          set -eu
+          docker run --rm --network host \
+            -e PGPASSWORD="$POSTGRES_PASSWORD" \
+            postgres:16-alpine \
+            psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+                 -v ON_ERROR_STOP=1 -c "
+              DROP SCHEMA IF EXISTS public CASCADE;
+              CREATE SCHEMA public AUTHORIZATION \"$POSTGRES_USER\";
+              GRANT ALL ON SCHEMA public TO \"$POSTGRES_USER\";
+            "
+
+          # Confirm everything's gone.
+          TBL_COUNT=$(docker run --rm --network host \
+            -e PGPASSWORD="$POSTGRES_PASSWORD" \
+            postgres:16-alpine \
+            psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+                 -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'")
+          if [ "$TBL_COUNT" != "0" ]; then
+            echo "::error::expected 0 tables in public after drop, got $TBL_COUNT"
+            exit 1
+          fi
+          echo "public schema cleared (0 tables)"
+
+      - name: Run restore.sh inside postgres:16-alpine sidecar
+        run: |
+          set -eu
+          docker run --rm --network host \
+            -e POSTGRES_HOST -e POSTGRES_PORT \
+            -e POSTGRES_USER -e POSTGRES_DB \
+            -e POSTGRES_PASSWORD \
+            -e BACKUP_DIR=/backups \
+            -v "${{ steps.prep.outputs.host_dir }}:/backups" \
+            -v "${{ github.workspace }}/infra/backup/restore.sh:/usr/local/bin/restore.sh:ro" \
+            postgres:16-alpine \
+            sh /usr/local/bin/restore.sh latest
+
+      - name: Verify sentinel rows + post-restore counts
+        run: |
+          set -eu
+          sentinel_sites=$(docker run --rm --network host \
+            -e PGPASSWORD="$POSTGRES_PASSWORD" \
+            postgres:16-alpine \
+            psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+                 -tAc "SELECT count(*) FROM sites WHERE slug LIKE 'backup-sentinel-%'")
+          users_total=$(docker run --rm --network host \
+            -e PGPASSWORD="$POSTGRES_PASSWORD" \
+            postgres:16-alpine \
+            psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+                 -tAc "SELECT count(*) FROM users")
+
+          echo "post-restore: sentinel_sites=$sentinel_sites users_total=$users_total"
+          if [ "$sentinel_sites" != "${{ steps.counts.outputs.sentinel_sites }}" ]; then
+            echo "::error::sentinel_sites drift: pre=${{ steps.counts.outputs.sentinel_sites }} post=$sentinel_sites"
+            exit 1
+          fi
+          if [ "$users_total" != "${{ steps.counts.outputs.users_total }}" ]; then
+            echo "::error::users_total drift: pre=${{ steps.counts.outputs.users_total }} post=$users_total"
+            exit 1
+          fi
+          # And verify each sentinel slug actually round-tripped, not just count.
+          docker run --rm --network host \
+            -e PGPASSWORD="$POSTGRES_PASSWORD" \
+            postgres:16-alpine \
+            psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+                 -v ON_ERROR_STOP=1 -c "
+              DO \$\$ BEGIN
+                IF (SELECT count(*) FROM sites
+                    WHERE slug IN ('backup-sentinel-a','backup-sentinel-b','backup-sentinel-c')) <> 3 THEN
+                  RAISE EXCEPTION 'sentinel slugs missing after restore';
+                END IF;
+              END \$\$;
+            "
+
+      - name: Exercise retention pruning
+        # Plant a synthetic "30 days old" dump and run backup again with
+        # KEEP_DAYS=14: pruner must drop the planted one and keep the
+        # one it just wrote.
+        run: |
+          set -eu
+          OLD="${{ steps.prep.outputs.host_dir }}/siteops-19700101T000000Z.dump"
+          echo "synthetic old dump" > "$OLD"
+          # 30 days ago. `touch -d` is GNU find/touch.
+          touch -d '30 days ago' "$OLD"
+          ls -l --time=mtime "${{ steps.prep.outputs.host_dir }}"
+
+          docker run --rm --network host \
+            -e POSTGRES_HOST -e POSTGRES_PORT \
+            -e POSTGRES_USER -e POSTGRES_DB \
+            -e POSTGRES_PASSWORD \
+            -e BACKUP_DIR=/backups \
+            -e KEEP_DAYS=14 \
+            -v "${{ steps.prep.outputs.host_dir }}:/backups" \
+            -v "${{ github.workspace }}/infra/backup/backup.sh:/usr/local/bin/backup.sh:ro" \
+            postgres:16-alpine \
+            sh /usr/local/bin/backup.sh
+
+          if [ -f "$OLD" ]; then
+            echo "::error::retention pruner failed to drop 30-day-old dump"
+            exit 1
+          fi
+
+          REMAINING=$(find "${{ steps.prep.outputs.host_dir }}" -maxdepth 1 -type f -name 'siteops-*.dump' | wc -l)
+          if [ "$REMAINING" -lt 1 ]; then
+            echo "::error::retention pruner over-deleted (no dumps left)"
+            exit 1
+          fi
+          echo "retention OK: $REMAINING current dump(s) kept, synthetic old one pruned"
+
+      - name: Upload dumps + logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pg-backup-drill-${{ github.run_id }}
+          path: |
+            .pg-backups/**
+          if-no-files-found: ignore
+          retention-days: 7

@@ -87,7 +87,7 @@ detected` 警告。
 - VS Code：仓库内提供 `.vscode/launch.json`，可分别附加到 web（Next.js）与 worker。
 - DB：用 `pnpm db:studio` 或任意 PG 客户端（DBeaver/TablePlus）。
 - Redis：`docker exec -it siteops-redis redis-cli`。
-- BullMQ Board：尚未挂载。`/admin/*` 路径已在 `apps/web/lib/auth.config.ts` 的 `PROTECTED_PREFIXES` 中保留，将来 Bull-Board 在 `/admin/queues` 落地时会自动继承 admin session 校验，不会出现裸暴露的窗口。
+- BullMQ Board：登录后访问 http://localhost:3000/admin/queues 可查看所有 12 个 BullMQ 队列的状态，支持 retry / clean 操作。面板可通过 `ADMIN_QUEUES_ENABLED=false` 关闭（默认开启）。
 
 ## 6. 端口
 

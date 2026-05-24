@@ -6,10 +6,18 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+// Narrow subpath import — see `sidebar.tsx` for the rationale.
+import { can, type UserRole } from '@siteops/shared/constants';
+
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 import { NAV_ITEMS } from './nav-config';
+
+export interface MobileNavProps {
+  /** Role of the current session. Controls which nav entries are rendered. */
+  role: UserRole;
+}
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
@@ -22,11 +30,12 @@ function isActive(pathname: string, href: string): boolean {
  * and ESC; a full Radix Dialog wrapper is overkill for an internal admin
  * tool.
  */
-export function MobileNav() {
+export function MobileNav({ role }: MobileNavProps) {
   const pathname = usePathname();
   const tNav = useTranslations('nav');
   const tSide = useTranslations('sidebar');
   const [open, setOpen] = useState(false);
+  const visibleItems = NAV_ITEMS.filter((item) => !item.permission || can(role, item.permission));
 
   // Close on route change so navigating to a section dismisses the drawer.
   useEffect(() => {
@@ -96,7 +105,7 @@ export function MobileNav() {
               </Button>
             </div>
             <nav className="flex flex-1 flex-col gap-1 p-2" aria-label={tNav('sectionsAriaLabel')}>
-              {NAV_ITEMS.map((item) => {
+              {visibleItems.map((item) => {
                 const active = isActive(pathname, item.href);
                 const Icon = item.icon;
                 return (

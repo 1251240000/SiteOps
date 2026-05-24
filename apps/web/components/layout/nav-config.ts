@@ -14,8 +14,12 @@ import {
   Settings,
   ServerCog,
   TrendingUp,
+  Users,
   Webhook,
 } from 'lucide-react';
+
+// Narrow subpath import — see `sidebar.tsx` for the rationale.
+import type { Permission } from '@siteops/shared/constants';
 
 /** i18n key under the `nav` namespace, e.g. `messages.nav.overview`. */
 export type NavKey =
@@ -33,6 +37,7 @@ export type NavKey =
   | 'tasks'
   | 'webhooks'
   | 'apiKeys'
+  | 'users'
   | 'settings';
 
 export type NavItem = {
@@ -40,6 +45,12 @@ export type NavItem = {
   /** Translation key — resolved at render time via `useTranslations('nav')`. */
   key: NavKey;
   icon: LucideIcon;
+  /**
+   * RBAC gate (T40). When set, the entry is hidden from users whose role
+   * does not have this permission. Items with no `permission` are shown to
+   * every authenticated session.
+   */
+  permission?: Permission;
 };
 
 /**
@@ -66,6 +77,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/agent-runs', key: 'agentRuns', icon: Bot },
   { href: '/tasks', key: 'tasks', icon: ListChecks },
   { href: '/webhooks', key: 'webhooks', icon: Webhook },
-  { href: '/settings/api-keys', key: 'apiKeys', icon: KeyRound },
-  { href: '/settings', key: 'settings', icon: Settings },
+  { href: '/settings/api-keys', key: 'apiKeys', icon: KeyRound, permission: 'api_keys.read' },
+  { href: '/settings/users', key: 'users', icon: Users, permission: 'users.read' },
+  { href: '/settings', key: 'settings', icon: Settings, permission: 'settings.read' },
 ];

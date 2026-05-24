@@ -42,35 +42,38 @@ export function GET(req: NextRequest, routeCtx: RouteContext) {
  * the transition is illegal (e.g. cancelling a terminal row).
  */
 export function PATCH(req: NextRequest, routeCtx: RouteContext) {
-  return withApi(async (rawReq, apiCtx) => {
-    const { id } = await routeCtx.params;
-    const idParsed = taskIdParamSchema.safeParse({ id });
-    if (!idParsed.success) {
-      throw new AppError('Invalid task id', {
-        code: 'validation_failed',
-        status: 400,
-        details: idParsed.error.flatten(),
-      });
-    }
-    let body: unknown;
-    try {
-      body = await rawReq.json();
-    } catch {
-      throw new AppError('Invalid JSON body', { code: 'validation_failed', status: 400 });
-    }
-    const bodyParsed = patchTaskSchema.safeParse(body);
-    if (!bodyParsed.success) {
-      throw new AppError('Invalid request body', {
-        code: 'validation_failed',
-        status: 400,
-        details: bodyParsed.error.flatten(),
-      });
-    }
-    const updated = await taskSvc.taskService.patch(
-      { db: getDb(), logger: apiCtx.logger },
-      idParsed.data.id,
-      bodyParsed.data,
-    );
-    return ok(updated);
-  })(req);
+  return withApi(
+    async (rawReq, apiCtx) => {
+      const { id } = await routeCtx.params;
+      const idParsed = taskIdParamSchema.safeParse({ id });
+      if (!idParsed.success) {
+        throw new AppError('Invalid task id', {
+          code: 'validation_failed',
+          status: 400,
+          details: idParsed.error.flatten(),
+        });
+      }
+      let body: unknown;
+      try {
+        body = await rawReq.json();
+      } catch {
+        throw new AppError('Invalid JSON body', { code: 'validation_failed', status: 400 });
+      }
+      const bodyParsed = patchTaskSchema.safeParse(body);
+      if (!bodyParsed.success) {
+        throw new AppError('Invalid request body', {
+          code: 'validation_failed',
+          status: 400,
+          details: bodyParsed.error.flatten(),
+        });
+      }
+      const updated = await taskSvc.taskService.patch(
+        { db: getDb(), logger: apiCtx.logger },
+        idParsed.data.id,
+        bodyParsed.data,
+      );
+      return ok(updated);
+    },
+    { permission: 'tasks.write' },
+  )(req);
 }

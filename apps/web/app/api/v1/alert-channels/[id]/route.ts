@@ -32,38 +32,44 @@ export function GET(req: NextRequest, routeCtx: RouteContext) {
 }
 
 export function PATCH(req: NextRequest, routeCtx: RouteContext) {
-  return withApi(async (request, ctx) => {
-    const id = await readId(routeCtx);
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      throw new AppError('Invalid JSON body', { code: 'validation_failed', status: 400 });
-    }
-    const parsed = updateAlertChannelSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new AppError('Invalid request body', {
-        code: 'validation_failed',
-        status: 400,
-        details: parsed.error.flatten(),
-      });
-    }
-    const row = await alertsSvc.alertService.updateChannel(
-      { db: getDb(), cipher: getAlertCipher(), logger: ctx.logger },
-      id,
-      parsed.data,
-    );
-    return ok({ ...row, config: { type: 'encrypted' } });
-  })(req);
+  return withApi(
+    async (request, ctx) => {
+      const id = await readId(routeCtx);
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        throw new AppError('Invalid JSON body', { code: 'validation_failed', status: 400 });
+      }
+      const parsed = updateAlertChannelSchema.safeParse(body);
+      if (!parsed.success) {
+        throw new AppError('Invalid request body', {
+          code: 'validation_failed',
+          status: 400,
+          details: parsed.error.flatten(),
+        });
+      }
+      const row = await alertsSvc.alertService.updateChannel(
+        { db: getDb(), cipher: getAlertCipher(), logger: ctx.logger },
+        id,
+        parsed.data,
+      );
+      return ok({ ...row, config: { type: 'encrypted' } });
+    },
+    { permission: 'alerts.write' },
+  )(req);
 }
 
 export function DELETE(req: NextRequest, routeCtx: RouteContext) {
-  return withApi(async (_req, ctx) => {
-    const id = await readId(routeCtx);
-    const row = await alertsSvc.alertService.deleteChannel(
-      { db: getDb(), cipher: getAlertCipher(), logger: ctx.logger },
-      id,
-    );
-    return ok({ ...row, config: { type: 'encrypted' } });
-  })(req);
+  return withApi(
+    async (_req, ctx) => {
+      const id = await readId(routeCtx);
+      const row = await alertsSvc.alertService.deleteChannel(
+        { db: getDb(), cipher: getAlertCipher(), logger: ctx.logger },
+        id,
+      );
+      return ok({ ...row, config: { type: 'encrypted' } });
+    },
+    { permission: 'alerts.write' },
+  )(req);
 }

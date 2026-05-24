@@ -20,6 +20,7 @@ import {
   FAKE_SESSION,
   readJson,
   resetDb,
+  sessionForRole,
   setSession,
   setupTestDb,
 } from '@/__tests__/helpers';
@@ -92,6 +93,45 @@ describe('POST /api/v1/sites', () => {
     expect(body.data.slug).toBe('docs-example');
     expect(body.data.healthScore).toBe(100);
     expect(body.data.id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  // T40 — RBAC gate is enforced via `withAuth(..., { permission: 'sites.write' })`.
+  // These two cases lock the role matrix in place so a future refactor that
+  // accidentally drops the `permission` option fails loudly.
+  it('returns 403 for a viewer trying to create a site', async () => {
+    await setSession(sessionForRole('viewer'));
+    const req = await buildRequest('http://localhost/api/v1/sites', {
+      method: 'POST',
+      body: {
+        name: 'Viewer Forbidden',
+        primaryUrl: 'https://viewer.example.com',
+        siteType: 'tool',
+        status: 'active',
+        tags: [],
+      },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: { code: string } }>(res);
+    expect(body.error.code).toBe('forbidden');
+  });
+
+  it('returns 201 for an operator creating a site', async () => {
+    await setSession(sessionForRole('operator'));
+    const req = await buildRequest('http://localhost/api/v1/sites', {
+      method: 'POST',
+      body: {
+        name: 'Operator Allowed',
+        primaryUrl: 'https://operator.example.com',
+        siteType: 'tool',
+        status: 'active',
+        tags: [],
+      },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(201);
+    const body = await readJson<{ data: { slug: string } }>(res);
+    expect(body.data.slug).toBe('operator-allowed');
   });
 });
 

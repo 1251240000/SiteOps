@@ -82,5 +82,5 @@ export const POST = withAuth(
       meta: { created, idempotent: !created },
     });
   },
-  { scopes: ['deployments:write'] },
+  { scopes: ['deployments:write'], permission: 'deployments.write' },
 );

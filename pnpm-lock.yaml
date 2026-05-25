@@ -27,8 +27,8 @@ importers:
         specifier: ^9.1.0
         version: 9.1.2(eslint@9.39.4(jiti@2.6.1))
       globals:
-        specifier: ^15.11.0
-        version: 15.15.0
+        specifier: ^17.6.0
+        version: 17.6.0
       husky:
         specifier: ^9.1.6
         version: 9.1.7
@@ -202,8 +202,8 @@ importers:
         specifier: ^9.13.0
         version: 9.39.4(jiti@1.21.7)
       globals:
-        specifier: ^15.11.0
-        version: 15.15.0
+        specifier: ^17.6.0
+        version: 17.6.0
       postcss:
         specifier: ^8.4.47
         version: 8.5.14
@@ -284,8 +284,8 @@ importers:
         specifier: ^9.1.0
         version: 9.1.2(eslint@9.39.4(jiti@2.6.1))
       globals:
-        specifier: ^15.11.0
-        version: 15.15.0
+        specifier: ^17.6.0
+        version: 17.6.0
       typescript-eslint:
         specifier: ^8.11.0
         version: 8.59.3(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
@@ -3342,8 +3342,8 @@ packages:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
     engines: {node: '>=18'}
 
-  globals@15.15.0:
-    resolution: {integrity: sha512-7ACyT3wmyp3I61S4fG682L0VA2RGD9otkqGJIwNUMF1SWUombIIk+af1unuDYgMm082aHYwD+mzJvv9Iu8dsgg==}
+  globals@17.6.0:
+    resolution: {integrity: sha512-sepffkT8stwnIYbsMBpoCHJuJM5l98FUF2AnE07hfvE0m/qp3R586hw4jF4uadbhvg1ooIdzuu7CsfD2jzCaNA==}
     engines: {node: '>=18'}
 
   globrex@0.1.2:
@@ -4253,6 +4253,7 @@ packages:
   recharts@2.15.4:
     resolution: {integrity: sha512-UT/q6fwS3c1dHbXv2uFgYJ9BMFHu3fwnd7AYZaEQhXuYQ4hgsxLvsUXzGdKeZrW5xopzDCvuA2N41WJ88I7zIw==}
     engines: {node: '>=14'}
+    deprecated: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
     peerDependencies:
       react: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -7699,7 +7700,7 @@ snapshots:
 
   globals@14.0.0: {}
 
-  globals@15.15.0: {}
+  globals@17.6.0: {}
 
   globrex@0.1.2: {}
 

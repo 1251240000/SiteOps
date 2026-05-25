@@ -31,7 +31,7 @@
     "@siteops/shared": "workspace:*",
     "cheerio": "^1.0.0",
     "drizzle-orm": "^0.45.2",
-    "lru-cache": "^11.0.2"
+    "lru-cache": "^11.5.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.4.5",

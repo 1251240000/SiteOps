@@ -83,7 +83,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.target.outputs.ref }}
           # Full history so action-gh-release can build a changelog between
@@ -204,7 +204,7 @@ jobs:
           fi
 
       - name: Checkout (full history)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.target.outputs.ref }}
           fetch-depth: 0

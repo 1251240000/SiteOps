@@ -238,8 +238,36 @@ docker compose -f infra/docker-compose.dev.yml down -v
 
 ```bash
 cp .env.example .env
-docker compose -f infra/docker-compose.yml build
-docker compose -f infra/docker-compose.yml up -d
+ln -s infra/docker-compose.yml docker-compose.yml
+docker-compose build
+docker-compose up -d
+```
+
+首次部署或更换数据库后，需要初始化数据库结构并创建管理员账号。先确认 `.env`
+中已设置生产数据库密码与管理员账号变量：
+
+```env
+POSTGRES_DB=siteops
+POSTGRES_USER=siteops
+POSTGRES_PASSWORD=change-me
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=ChangeMe123!
+```
+
+生产环境建议在容器内执行迁移与 seed。生产运行镜像不依赖 `pnpm`，
+直接用 `node` 运行已编译的 DB 脚本，并复用 compose 注入的 `DATABASE_URL`、
+`ADMIN_EMAIL` 与 `ADMIN_PASSWORD`：
+
+```bash
+docker-compose exec -w /app/packages/db worker node dist/scripts/migrate.js
+docker-compose exec -w /app/packages/db worker node dist/scripts/seed.js
+```
+
+`db:seed` 会使用 `ADMIN_EMAIL` 与 `ADMIN_PASSWORD` 创建初始管理员账号。
+如果同邮箱账号已存在，seed 会跳过，不会重置已有密码。可用以下命令检查账号状态：
+
+```bash
+docker-compose exec postgres psql -U "${POSTGRES_USER:-siteops}" -d "${POSTGRES_DB:-siteops}" -c "select email, role, status, last_login_at from users;"
 ```
 
 生产环境至少需要配置：

@@ -277,6 +277,8 @@ docker-compose exec postgres psql -U "${POSTGRES_USER:-siteops}" -d "${POSTGRES_
 - **`AUTH_SECRET`**
 - **`ALERT_CIPHER_KEY`**
 - **`SITEOPS_DOMAIN`**
+- **`ADMIN_EMAIL`**
+- **`ADMIN_PASSWORD`**
 
 ## 文档导航
 

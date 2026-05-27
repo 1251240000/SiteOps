@@ -6,12 +6,14 @@
 # the host but never directly exposed to the internet.
 #
 # Usage:
-#   docker compose -f infra/docker-compose.yml build
-#   docker compose -f infra/docker-compose.yml up -d
+#   ln -s infra/docker-compose.yml docker-compose.yml
+#   docker-compose build
+#   docker-compose up -d
 #   curl -fsS http://localhost/healthz
 #
 # Required env (see .env.example):
-#   POSTGRES_PASSWORD, REDIS_PASSWORD, AUTH_SECRET, SITEOPS_DOMAIN
+#   POSTGRES_PASSWORD, REDIS_PASSWORD, AUTH_SECRET, AUTH_URL,
+#   ALERT_CIPHER_KEY, SITEOPS_DOMAIN, ADMIN_EMAIL, ADMIN_PASSWORD
 
 name: siteops
 
@@ -111,6 +113,8 @@ services:
     restart: unless-stopped
     environment:
       <<: *web-env
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
       # Boots Chromium-backed Lighthouse runner; the image already ships the
       # binary + the optional `lighthouse` / `chrome-launcher` deps.
       LIGHTHOUSE_RUNNER: ${LIGHTHOUSE_RUNNER:-real}

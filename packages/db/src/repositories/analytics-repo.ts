@@ -30,6 +30,44 @@ function nullableNum(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function emptyOverview(): AnalyticsOverview {
+  return {
+    pv: 0,
+    uv: 0,
+    sessions: 0,
+    topPages: [],
+    topReferrers: [],
+    webVitalsP75: {
+      LCP: null,
+      CLS: null,
+      INP: null,
+      FCP: null,
+      TTFB: null,
+    },
+  };
+}
+
+function isMissingAnalyticsSchemaError(err: unknown): boolean {
+  let current: unknown = err;
+  while (current && typeof current === 'object') {
+    const record = current as Record<string, unknown>;
+    const code = record['code'];
+    const message = String(record['message'] ?? '');
+    const query = String(record['query'] ?? '');
+    if (
+      (code === '42P01' || code === '42703') &&
+      (message.includes('analytics_events') ||
+        message.includes('analytics_sessions') ||
+        query.includes('analytics_events') ||
+        query.includes('analytics_sessions'))
+    ) {
+      return true;
+    }
+    current = record['cause'];
+  }
+  return false;
+}
+
 export const analyticsRepo = {
   async findSiteByPublicKey(db: Db, siteKey: string) {
     const rows = await db
@@ -113,68 +151,74 @@ export const analyticsRepo = {
       sql`${analyticsEvents.occurredAt} >= ${range.from}`,
       sql`${analyticsEvents.occurredAt} <= ${range.to}`,
     );
-    const [summaryRows, pageRows, refRows, vitalRows] = await Promise.all([
-      db
-        .select({
-          pv: sql<number>`COUNT(*) FILTER (WHERE ${analyticsEvents.type} = 'pageview')::int`,
-          uv: sql<number>`COUNT(DISTINCT ${analyticsEvents.visitorId})::int`,
-          sessions: sql<number>`COUNT(DISTINCT ${analyticsEvents.sessionId})::int`,
-        })
-        .from(analyticsEvents)
-        .where(whereRange),
-      db
-        .select({ path: analyticsEvents.path, pv: sql<number>`COUNT(*)::int` })
-        .from(analyticsEvents)
-        .where(and(whereRange, eq(analyticsEvents.type, 'pageview')))
-        .groupBy(analyticsEvents.path)
-        .orderBy(desc(sql`COUNT(*)`))
-        .limit(10),
-      db
-        .select({ referrer: analyticsEvents.referrer, count: sql<number>`COUNT(*)::int` })
-        .from(analyticsEvents)
-        .where(
-          and(
-            whereRange,
-            eq(analyticsEvents.type, 'pageview'),
-            sql`${analyticsEvents.referrer} IS NOT NULL AND ${analyticsEvents.referrer} <> ''`,
-          ),
-        )
-        .groupBy(analyticsEvents.referrer)
-        .orderBy(desc(sql`COUNT(*)`))
-        .limit(10),
-      db
-        .select({
-          name: analyticsEvents.name,
-          p75: sql<
-            number | null
-          >`percentile_disc(0.75) WITHIN GROUP (ORDER BY ((${analyticsEvents.properties}->>'value')::numeric))`,
-        })
-        .from(analyticsEvents)
-        .where(
-          and(
-            whereRange,
-            eq(analyticsEvents.type, 'web_vital'),
-            sql`${analyticsEvents.properties} ? 'value'`,
-          ),
-        )
-        .groupBy(analyticsEvents.name),
-    ]);
-    const summary = summaryRows[0];
-    const webVitalsP75: Record<string, number | null> = {
-      LCP: null,
-      CLS: null,
-      INP: null,
-      FCP: null,
-      TTFB: null,
-    };
-    for (const row of vitalRows) webVitalsP75[row.name] = nullableNum(row.p75);
-    return {
-      pv: num(summary?.pv),
-      uv: num(summary?.uv),
-      sessions: num(summary?.sessions),
-      topPages: pageRows.map((r) => ({ path: r.path ?? '/', pv: num(r.pv) })),
-      topReferrers: refRows.map((r) => ({ referrer: r.referrer ?? '', count: num(r.count) })),
-      webVitalsP75,
-    };
+
+    try {
+      const [summaryRows, pageRows, refRows, vitalRows] = await Promise.all([
+        db
+          .select({
+            pv: sql<number>`COUNT(*) FILTER (WHERE ${analyticsEvents.type} = 'pageview')::int`,
+            uv: sql<number>`COUNT(DISTINCT ${analyticsEvents.visitorId})::int`,
+            sessions: sql<number>`COUNT(DISTINCT ${analyticsEvents.sessionId})::int`,
+          })
+          .from(analyticsEvents)
+          .where(whereRange),
+        db
+          .select({ path: analyticsEvents.path, pv: sql<number>`COUNT(*)::int` })
+          .from(analyticsEvents)
+          .where(and(whereRange, eq(analyticsEvents.type, 'pageview')))
+          .groupBy(analyticsEvents.path)
+          .orderBy(desc(sql`COUNT(*)`))
+          .limit(10),
+        db
+          .select({ referrer: analyticsEvents.referrer, count: sql<number>`COUNT(*)::int` })
+          .from(analyticsEvents)
+          .where(
+            and(
+              whereRange,
+              eq(analyticsEvents.type, 'pageview'),
+              sql`${analyticsEvents.referrer} IS NOT NULL AND ${analyticsEvents.referrer} <> ''`,
+            ),
+          )
+          .groupBy(analyticsEvents.referrer)
+          .orderBy(desc(sql`COUNT(*)`))
+          .limit(10),
+        db
+          .select({
+            name: analyticsEvents.name,
+            p75: sql<
+              number | null
+            >`percentile_disc(0.75) WITHIN GROUP (ORDER BY ((${analyticsEvents.properties}->>'value')::numeric))`,
+          })
+          .from(analyticsEvents)
+          .where(
+            and(
+              whereRange,
+              eq(analyticsEvents.type, 'web_vital'),
+              sql`${analyticsEvents.properties} ? 'value'`,
+            ),
+          )
+          .groupBy(analyticsEvents.name),
+      ]);
+      const summary = summaryRows[0];
+      const webVitalsP75: Record<string, number | null> = {
+        LCP: null,
+        CLS: null,
+        INP: null,
+        FCP: null,
+        TTFB: null,
+      };
+      for (const row of vitalRows) webVitalsP75[row.name] = nullableNum(row.p75);
+      return {
+        pv: num(summary?.pv),
+        uv: num(summary?.uv),
+        sessions: num(summary?.sessions),
+        topPages: pageRows.map((r) => ({ path: r.path ?? '/', pv: num(r.pv) })),
+        topReferrers: refRows.map((r) => ({ referrer: r.referrer ?? '', count: num(r.count) })),
+        webVitalsP75,
+      };
+    } catch (err) {
+      if (isMissingAnalyticsSchemaError(err)) return emptyOverview();
+      throw err;
+    }
   },
 };

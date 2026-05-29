@@ -52,4 +52,23 @@ describe('analyticsRepo', () => {
     const rows = await handle.db.select().from(analyticsEvents);
     expect(rows).toHaveLength(1);
   });
+
+  it('returns zero overview when analytics tables are unavailable before migrations run', async () => {
+    const site = await seedSite();
+    await handle.pg.exec('DROP TABLE analytics_events; DROP TABLE analytics_sessions;');
+
+    await expect(
+      analyticsRepo.getOverview(handle.db as never, site.id, {
+        from: new Date('2026-01-01T00:00:00Z'),
+        to: new Date('2026-01-31T23:59:59Z'),
+      }),
+    ).resolves.toEqual({
+      pv: 0,
+      uv: 0,
+      sessions: 0,
+      topPages: [],
+      topReferrers: [],
+      webVitalsP75: { LCP: null, CLS: null, INP: null, FCP: null, TTFB: null },
+    });
+  });
 });

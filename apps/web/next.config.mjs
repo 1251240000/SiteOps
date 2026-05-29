@@ -27,6 +27,7 @@ const nextConfig = {
     '@siteops/services',
     '@siteops/integrations',
     '@siteops/shared',
+    '@siteops/tracker',
   ],
 
   // pino + native Node addons in `postgres-js` / `ioredis` shouldn't be

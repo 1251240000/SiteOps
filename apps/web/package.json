@@ -61,7 +61,8 @@
     "sonner": "^1.7.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@siteops/tracker": "workspace:*"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.4.5",

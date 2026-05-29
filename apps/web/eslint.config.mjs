@@ -32,6 +32,6 @@ export default [
   },
   {
     // Next.js generates this file; never lint or modify it.
-    ignores: ['.next/**', 'next-env.d.ts'],
+    ignores: ['.next/**', 'next-env.d.ts', 'public/tracker.js'],
   },
 ];

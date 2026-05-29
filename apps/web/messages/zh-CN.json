@@ -255,7 +255,19 @@
         "submitCreate": "创建站点",
         "submitUpdate": "保存修改",
         "createdToast": "已创建站点「{name}」",
-        "updatedToast": "已更新站点「{name}」"
+        "updatedToast": "已更新站点「{name}」",
+        "analyticsInstall": {
+          "title": "前端埋点接入",
+          "description": "复制这段代码到站点，即可启用自研 pageview 与 RUM 采集。",
+          "publicKeyLabel": "公开埋点 Key",
+          "snippetLabel": "CDN script 片段",
+          "copy": "复制代码",
+          "copiedToast": "已复制埋点代码片段",
+          "copyFailedToast": "复制失败",
+          "installHint": "将 script 粘贴到 </head> 前；加载后会自动发送 pageview。",
+          "originHint": "请保持站点主域名准确（{primaryUrl}）；collect API 会用它做 origin 校验。",
+          "piiHint": "自定义事件属性不要发送 email、phone、token、password 等 PII。"
+        }
       },
       "detail": {
         "emptyTitle": "更多站点组件即将上线",

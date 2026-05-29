@@ -255,7 +255,19 @@
         "submitCreate": "Create site",
         "submitUpdate": "Save changes",
         "createdToast": "Site “{name}” created",
-        "updatedToast": "Site “{name}” updated"
+        "updatedToast": "Site “{name}” updated",
+        "analyticsInstall": {
+          "title": "Frontend analytics install",
+          "description": "Copy this snippet into your site to enable self-hosted pageview and RUM collection.",
+          "publicKeyLabel": "Public analytics key",
+          "snippetLabel": "CDN script snippet",
+          "copy": "Copy code",
+          "copiedToast": "Analytics snippet copied",
+          "copyFailedToast": "Could not copy snippet",
+          "installHint": "Paste the script before the closing </head> tag. It auto-sends a pageview when loaded.",
+          "originHint": "Keep the site primary URL accurate ({primaryUrl}); the collect API uses it for origin validation.",
+          "piiHint": "Do not send email, phone, token, password, or other PII in custom event properties."
+        }
       },
       "detail": {
         "emptyTitle": "More site components coming soon",

@@ -4,7 +4,7 @@
 
 ## 里程碑目标
 
-5 个针对运营痛点的能力，外加一个自研数据采集底座：
+5 个针对运营痛点的能力，外加一个自研数据采集底座与低门槛接入方案：
 
 1. **Synthetic transactions**：超出 GET / 探活，跑用户提交的 Playwright 多步骤脚本（"登录 → 下单 → 校验 JSON"）。
 2. **SLA / Uptime 报告**：按月生成 PDF / Markdown SLA 报告（含 uptime %、平均响应、关键 alerts）。
@@ -12,6 +12,7 @@
 4. **联盟收入自动化**：现状 affiliate_entries 手动；接 Amazon Associates / ShareASale reporting API。
 5. **预算 + A/B 实验**：site_costs 超阈值告警；站点端 SDK 给 `track(experimentId, variant, conversion)`。
 6. **自研前端埋点**：浏览器 SDK + collect API 补齐 GA4 不可用、延迟或被拦截时的 PV/UV/RUM 数据。
+7. **CDN script 接入**：站点复制一段 `<script data-site-key="...">` 即可启用自研埋点。
 
 ## 任务清单
 
@@ -22,7 +23,8 @@
 | [T57](./T57-cwv-trend-chart.md)                | Core Web Vitals 趋势图           | ⬜   |  4 h | T14      |
 | [T58](./T58-affiliate-autoingest.md)           | 联盟收入自动抓取                 | ⬜   |  5 h | T23      |
 | [T59](./T59-budget-alert-ab-tracking.md)       | 预算告警 + A/B 实验跟踪          | ⬜   |  3 h | T23, T16 |
-| [T64](./T64-self-hosted-frontend-analytics.md) | 自研前端埋点 SDK + RUM 采集      | ⬜   |  6 h | T08, T22 |
+| [T64](./T64-self-hosted-frontend-analytics.md) | 自研前端埋点 SDK + RUM 采集      | ✅   |  6 h | T08, T22 |
+| [T65](./T65-cdn-script-onboarding.md)          | CDN Script 接入与埋点配置片段    | ✅   |  4 h | T64      |
 
 ## 不在 M13 范围
 
@@ -38,4 +40,5 @@
 - [ ] Amazon Associates 接入后每天自动写入 affiliate_entries
 - [ ] site_costs > 阈值触发 alert；A/B `/track` 端点能接受 SDK 上报
 - [ ] 自研前端埋点 SDK 能采集 PV/UV/session 与 RUM p75，并在 analytics 页展示
+- [ ] CDN script 接入片段可复制，站点只传 `data-site-key` 即可上报 pageview
 - [ ] `pnpm -r typecheck && lint && test` 全绿

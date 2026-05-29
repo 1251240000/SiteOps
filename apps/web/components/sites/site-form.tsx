@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 
+import { AnalyticsInstallCard } from '@/components/sites/analytics-install-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,7 +40,9 @@ import { sitesKeys, type Site } from '@/lib/queries/sites';
 
 const NULL_VALUE = '__none__';
 
-type SiteFormProps = { mode: 'create'; initial?: undefined } | { mode: 'edit'; initial: Site };
+type SiteFormProps =
+  | { mode: 'create'; initial?: undefined; appOrigin?: undefined }
+  | { mode: 'edit'; initial: Site; appOrigin: string };
 
 type FormFields = CreateSiteInput;
 
@@ -328,6 +331,14 @@ export function SiteForm(props: SiteFormProps) {
           </Field>
         </CardContent>
       </Card>
+
+      {props.mode === 'edit' ? (
+        <AnalyticsInstallCard
+          appOrigin={props.appOrigin}
+          publicAnalyticsKey={props.initial.publicAnalyticsKey}
+          primaryUrl={props.initial.primaryUrl}
+        />
+      ) : null}
 
       <Card>
         <CardHeader>

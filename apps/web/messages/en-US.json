@@ -278,7 +278,8 @@
         "archiveDialogTitle": "Archive {name}?",
         "archiveDialogDescription": "Archiving hides this site from the default list but keeps its history. Toggle \"Show archived\" on the list page to see it again.",
         "archiveSuccessToast": "Archived {name}",
-        "archiveFailedToast": "Archive failed"
+        "archiveFailedToast": "Archive failed",
+        "tabAnalytics": "Analytics"
       },
       "summary": {
         "slug": "Slug",
@@ -401,7 +402,7 @@
         "title": "Affiliate entries",
         "subtitle": "Manual revenue rows. Each entry is spread evenly across its period in the chart.",
         "addEntry": "Add entry",
-        "empty": "No entries yet \u2014 add a row above to start tracking affiliate revenue.",
+        "empty": "No entries yet — add a row above to start tracking affiliate revenue.",
         "colPeriod": "Period",
         "colProgram": "Program",
         "colAmount": "Amount (USD)",
@@ -414,7 +415,7 @@
         "deleteDescription": "This will permanently remove the {program} entry covering {period} ({amount}).",
         "cancel": "Cancel",
         "delete": "Delete",
-        "removing": "Removing\u2026",
+        "removing": "Removing…",
         "entryRemoved": "Entry removed",
         "deleteFailed": "Delete failed",
         "form": {
@@ -435,7 +436,7 @@
           "cancel": "Cancel",
           "addEntry": "Add entry",
           "saveChanges": "Save changes",
-          "saving": "Saving\u2026",
+          "saving": "Saving…",
           "entryAdded": "Entry added",
           "entryUpdated": "Entry updated",
           "saveFailed": "Save failed"
@@ -487,7 +488,7 @@
         "colRpm": "RPM",
         "colFlags": "Flags",
         "naValue": "N/A",
-        "empty": "No sites yet \u2014 create one and add cost / revenue data to see ROI.",
+        "empty": "No sites yet — create one and add cost / revenue data to see ROI.",
         "flagsShort": {
           "negative_roi": "ROI<0",
           "low_rpm": "low RPM",
@@ -528,11 +529,11 @@
           "cancel": "Cancel",
           "addCost": "Add cost",
           "saveChanges": "Save changes",
-          "saving": "Saving\u2026",
+          "saving": "Saving…",
           "errorPickMonth": "Pick a valid month",
           "errorFutureMonth": "Cannot record costs for a future month",
           "errorAllZero": "Enter at least one non-zero cost",
-          "confirmHighDollar": "One or more columns ({cols}) exceed {threshold}.\nThis is unusual \u2014 confirm to save.",
+          "confirmHighDollar": "One or more columns ({cols}) exceed {threshold}.\nThis is unusual — confirm to save.",
           "costAdded": "Cost added",
           "costUpdated": "Cost updated",
           "saveFailed": "Save failed"
@@ -1119,6 +1120,31 @@
         "input": "Input",
         "output": "Output",
         "loadFailed": "Failed to load run"
+      }
+    },
+    "analytics": {
+      "source": "Self-hosted",
+      "visitorHint": "anonymous visitor id",
+      "sessionHint": "browser sessions",
+      "kpis": {
+        "ariaLabel": "Self-hosted analytics KPIs",
+        "pageViews": "Page views",
+        "uniqueVisitors": "Unique visitors",
+        "sessions": "Sessions",
+        "vitals": "LCP p75",
+        "lcpP75": "Web Vitals p75"
+      },
+      "topPages": {
+        "title": "Top pages",
+        "empty": "No pageviews recorded in this window."
+      },
+      "topReferrers": {
+        "title": "Top referrers",
+        "empty": "No referrers recorded in this window."
+      },
+      "webVitals": {
+        "title": "Web Vitals",
+        "p75": "p75"
       }
     }
   }

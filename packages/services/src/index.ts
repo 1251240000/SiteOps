@@ -12,6 +12,7 @@ export * as audits from './audits/index.js';
 export * as alerts from './alerts/index.js';
 export * as errorTracking from './error-tracking/index.js';
 export * as metrics from './metrics/index.js';
+export * as analytics from './analytics/index.js';
 export * as revenue from './revenue/index.js';
 export * as roi from './roi/index.js';
 export * as integrations from './integrations/index.js';

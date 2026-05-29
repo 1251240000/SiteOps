@@ -278,7 +278,8 @@
         "archiveDialogTitle": "归档「{name}」？",
         "archiveDialogDescription": "归档会从默认列表中隐藏该站点，但保留历史数据。在列表页打开「显示已归档」即可重新看到。",
         "archiveSuccessToast": "已归档「{name}」",
-        "archiveFailedToast": "归档失败"
+        "archiveFailedToast": "归档失败",
+        "tabAnalytics": "自研埋点"
       },
       "summary": {
         "slug": "Slug",
@@ -1119,6 +1120,31 @@
         "input": "输入",
         "output": "输出",
         "loadFailed": "加载详情失败"
+      }
+    },
+    "analytics": {
+      "source": "Self-hosted",
+      "visitorHint": "匿名访客 ID",
+      "sessionHint": "浏览器会话",
+      "kpis": {
+        "ariaLabel": "自研埋点指标",
+        "pageViews": "页面浏览量",
+        "uniqueVisitors": "独立访客",
+        "sessions": "会话",
+        "vitals": "LCP p75",
+        "lcpP75": "Web Vitals p75"
+      },
+      "topPages": {
+        "title": "Top 页面",
+        "empty": "该窗口内暂无 pageview。"
+      },
+      "topReferrers": {
+        "title": "Top 来源",
+        "empty": "该窗口内暂无来源记录。"
+      },
+      "webVitals": {
+        "title": "Web Vitals",
+        "p75": "p75"
       }
     }
   }

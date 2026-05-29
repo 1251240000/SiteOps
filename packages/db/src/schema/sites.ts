@@ -51,6 +51,9 @@ export const sites = pgTable(
     cfPagesProject: text('cf_pages_project'),
     analyticsProvider: text('analytics_provider').$type<AnalyticsProvider>(),
     analyticsId: text('analytics_id'),
+    publicAnalyticsKey: text('public_analytics_key')
+      .notNull()
+      .default(sql`'site_pk_' || encode(gen_random_bytes(18), 'hex')`),
     searchConsoleProperty: text('search_console_property'),
     adsensePublisherId: text('adsense_publisher_id'),
     adsenseStatus: text('adsense_status').$type<AdsenseStatus>(),
@@ -65,6 +68,7 @@ export const sites = pgTable(
   },
   (t) => [
     uniqueIndex('sites_slug_uk').on(t.slug),
+    uniqueIndex('sites_public_analytics_key_uk').on(t.publicAnalyticsKey),
     index('sites_site_type_idx').on(t.siteType),
     index('sites_status_idx').on(t.status),
     index('sites_target_country_idx').on(t.targetCountry),

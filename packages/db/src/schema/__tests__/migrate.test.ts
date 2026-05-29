@@ -44,6 +44,8 @@ describe('migrations', () => {
       'audit_runs',
       'audit_findings',
       'metrics_daily',
+      'analytics_sessions',
+      'analytics_events',
       'search_console_daily',
       'adsense_daily',
       'errors',

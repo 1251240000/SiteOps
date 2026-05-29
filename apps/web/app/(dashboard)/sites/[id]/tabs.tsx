@@ -6,12 +6,21 @@ import { usePathname } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 
-type TabKey = 'overview' | 'traffic' | 'revenue' | 'uptime' | 'audits' | 'deployments' | 'settings';
+type TabKey =
+  | 'overview'
+  | 'traffic'
+  | 'analytics'
+  | 'revenue'
+  | 'uptime'
+  | 'audits'
+  | 'deployments'
+  | 'settings';
 
 /** i18n key under `pages.sites.detail.tab<Pascal>`. */
 const TAB_KEYS: readonly TabKey[] = [
   'overview',
   'traffic',
+  'analytics',
   'revenue',
   'uptime',
   'audits',
@@ -22,6 +31,7 @@ const TAB_KEYS: readonly TabKey[] = [
 const TAB_LABEL_KEY: Record<TabKey, string> = {
   overview: 'tabOverview',
   traffic: 'tabTraffic',
+  analytics: 'tabAnalytics',
   revenue: 'tabRevenue',
   uptime: 'tabUptime',
   audits: 'tabAudits',

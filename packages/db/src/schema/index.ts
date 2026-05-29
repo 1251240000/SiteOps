@@ -6,6 +6,7 @@ export * from './deployments.js';
 export * from './uptime-checks.js';
 export * from './audits.js';
 export * from './metrics.js';
+export * from './analytics.js';
 export * from './errors.js';
 export * from './alerts.js';
 export * from './jobs-log.js';

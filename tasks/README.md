@@ -235,19 +235,20 @@
 
 ---
 
-### M13 · 监控与商业化增强（P2，约 26h）
+### M13 · 监控与商业化增强（P2，约 32h）
 
-| ID                                                              | 标题                             | 状态 | 前置     |
-| --------------------------------------------------------------- | -------------------------------- | ---- | -------- |
-| [T55](./M13-monitoring-revenue/T55-synthetic-monitoring.md)     | Synthetic transaction monitoring | ⬜   | T11      |
-| [T56](./M13-monitoring-revenue/T56-sla-report-generation.md)    | SLA / Uptime 报告生成            | ⬜   | T11, T22 |
-| [T57](./M13-monitoring-revenue/T57-cwv-trend-chart.md)          | Core Web Vitals 趋势图           | ⬜   | T14      |
-| [T58](./M13-monitoring-revenue/T58-affiliate-autoingest.md)     | 联盟收入自动抓取                 | ⬜   | T23      |
-| [T59](./M13-monitoring-revenue/T59-budget-alert-ab-tracking.md) | 预算告警 + A/B 实验跟踪          | ⬜   | T23, T16 |
+| ID                                                                    | 标题                             | 状态 | 前置     |
+| --------------------------------------------------------------------- | -------------------------------- | ---- | -------- |
+| [T55](./M13-monitoring-revenue/T55-synthetic-monitoring.md)           | Synthetic transaction monitoring | ⬜   | T11      |
+| [T56](./M13-monitoring-revenue/T56-sla-report-generation.md)          | SLA / Uptime 报告生成            | ⬜   | T11, T22 |
+| [T57](./M13-monitoring-revenue/T57-cwv-trend-chart.md)                | Core Web Vitals 趋势图           | ⬜   | T14      |
+| [T58](./M13-monitoring-revenue/T58-affiliate-autoingest.md)           | 联盟收入自动抓取                 | ⬜   | T23      |
+| [T59](./M13-monitoring-revenue/T59-budget-alert-ab-tracking.md)       | 预算告警 + A/B 实验跟踪          | ⬜   | T23, T16 |
+| [T64](./M13-monitoring-revenue/T64-self-hosted-frontend-analytics.md) | 自研前端埋点 SDK + RUM 采集      | ⬜   | T08, T22 |
 
 里程碑概览见 [`M13-monitoring-revenue/README.md`](./M13-monitoring-revenue/README.md)。
 
-**里程碑完成条件**：synthetic 脚本可跑 + 失败告警；SLA PDF 可下载；CWV 趋势图上线；Amazon/ShareASale 自动抓取；budget alert + A/B `/track` 端点可用。
+**里程碑完成条件**：synthetic 脚本可跑 + 失败告警；SLA PDF 可下载；CWV 趋势图上线；Amazon/ShareASale 自动抓取；budget alert + A/B `/track` 端点可用；自研埋点 SDK 能采集 PV/UV/session 与 RUM p75。
 
 ---
 
@@ -335,6 +336,7 @@ M13 监控/收入增强
   T14        ─ T57 (CWV trend)
   T23        ─ T58 (affiliate auto)
   T23/T16    ─ T59 (budget + A/B)
+  T08/T22    ─ T64 (self-hosted frontend analytics)
 
 M14 UX & 长期债务
   T07 ─ T60 (cmdk + home)
@@ -362,13 +364,13 @@ M14 UX & 长期债务
 | M10    | 通知与外发       | 20 h | 256 h | ⬜   |
 | M11    | 可观测性与运维   | 22 h | 278 h | ⬜   |
 | M12    | Agent 生态       | 28 h | 306 h | ⬜   |
-| M13    | 监控/商业化增强  | 26 h | 332 h | ⬜   |
-| M14    | UX 与长期债务    | 17 h | 349 h | ⬜   |
+| M13    | 监控/商业化增强  | 32 h | 338 h | ⬜   |
+| M14    | UX 与长期债务    | 17 h | 355 h | ⬜   |
 
 按每天有效 5h、每周 5 天计：
 
 - **MVP 主线（M0–M6）**：154 h ≈ 6.2 周（已完成）
-- **后续主线（M7–M14）**：195 h ≈ 7.8 周
-- **总计**：349 h ≈ 14 周
+- **后续主线（M7–M14）**：201 h ≈ 8.0 周
+- **总计**：355 h ≈ 14.2 周
 
 推荐推进顺序：**M7 → M8 → M9 → M10 / M11（可并行）→ M12 → M13 → M14**。M7–M11 是平台进入"可长期托管运行"的硬基线，建议优先；M12–M14 是业务能力扩展与体验提升，按运营优先级排。

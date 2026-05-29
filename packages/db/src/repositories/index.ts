@@ -8,6 +8,7 @@ export * from './alert-repo.js';
 export * from './integration-state-repo.js';
 export * from './integration-credential-repo.js';
 export * from './metrics-repo.js';
+export * from './analytics-repo.js';
 export * from './affiliate-entry-repo.js';
 export * from './site-cost-repo.js';
 export * from './task-repo.js';

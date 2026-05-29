@@ -1,0 +1,33 @@
+{
+  "name": "@siteops/tracker",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@siteops/eslint-config": "workspace:*",
+    "@siteops/tsconfig": "workspace:*",
+    "@types/node": "^20.16.13",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4"
+  }
+}

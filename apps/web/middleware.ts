@@ -21,7 +21,6 @@ import { NextResponse } from 'next/server';
 import { authConfig } from './lib/auth.config';
 import { LOCALE_COOKIE } from './lib/i18n/locales';
 import { pickLocale } from './lib/i18n/pick-locale';
-import { MIDDLEWARE_MATCHER } from './lib/middleware-matcher';
 import { applySecurityHeaders } from './lib/security-headers';
 
 const { auth } = NextAuth(authConfig);
@@ -51,5 +50,5 @@ export const config = {
   // favicon, liveness probe `/healthz`, and the public browser tracker bundle.
   // `/login` IS matched so it gets the same security envelope as the dashboard;
   // the page component itself bounces logged-in users away.
-  matcher: [MIDDLEWARE_MATCHER],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|healthz|tracker.js).*)'],
 };

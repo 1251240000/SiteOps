@@ -19,9 +19,9 @@
     "@siteops/integrations": "workspace:*",
     "@siteops/services": "workspace:*",
     "@siteops/shared": "workspace:*",
-    "bullmq": "^5.34.0",
+    "bullmq": "^5.77.6",
     "cheerio": "^1.0.0",
-    "ioredis": "^5.4.1",
+    "ioredis": "^5.11.0",
     "p-limit": "^6.1.0"
   },
   "devDependencies": {
@@ -29,7 +29,7 @@
     "@siteops/tsconfig": "workspace:*",
     "@types/node": "^20.16.13",
     "eslint": "^9.13.0",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.3",
     "typescript": "^5.6.3",
     "vitest": "^3.2.4"
   }

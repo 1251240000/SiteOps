@@ -20,6 +20,7 @@ describe('POST /api/v1/collect CORS', () => {
 
     expect(res.status).toBe(204);
     expect(res.headers.get('access-control-allow-origin')).toBe('https://example.com');
+    expect(res.headers.get('access-control-allow-credentials')).toBe('true');
     expect(res.headers.get('access-control-allow-methods')).toContain('POST');
     expect(res.headers.get('access-control-allow-headers')).toContain('content-type');
   });
@@ -35,7 +36,22 @@ describe('POST /api/v1/collect CORS', () => {
 
     expect(res.status).toBe(400);
     expect(res.headers.get('access-control-allow-origin')).toBe('https://example.com');
+    expect(res.headers.get('access-control-allow-credentials')).toBe('true');
     const body = await readJson<{ error: { code: string } }>(res);
     expect(body.error.code).toBe('validation_failed');
+  });
+
+  it('does not combine wildcard origin with credentials for non-browser callers', async () => {
+    const req = await buildRequest('http://localhost/api/v1/collect', {
+      method: 'OPTIONS',
+      headers: {
+        'access-control-request-method': 'POST',
+      },
+    });
+
+    const res = OPTIONS(req);
+
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+    expect(res.headers.get('access-control-allow-credentials')).toBeNull();
   });
 });

@@ -8,13 +8,19 @@ import { withPublic } from '@/lib/with-api';
 export const dynamic = 'force-dynamic';
 
 function corsHeaders(origin: string | null): HeadersInit {
-  return {
-    'access-control-allow-origin': origin ?? '*',
+  const headers: Record<string, string> = {
     'access-control-allow-methods': 'POST, OPTIONS',
     'access-control-allow-headers': 'content-type',
     'access-control-max-age': '86400',
     vary: 'origin',
   };
+  if (origin) {
+    headers['access-control-allow-origin'] = origin;
+    headers['access-control-allow-credentials'] = 'true';
+  } else {
+    headers['access-control-allow-origin'] = '*';
+  }
+  return headers;
 }
 
 function applyCorsHeaders(headers: Headers, origin: string | null): void {

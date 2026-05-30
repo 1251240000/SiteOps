@@ -17,12 +17,18 @@ function corsHeaders(origin: string | null): HeadersInit {
   };
 }
 
+function applyCorsHeaders(headers: Headers, origin: string | null): void {
+  for (const [key, value] of Object.entries(corsHeaders(origin))) {
+    headers.set(key, value);
+  }
+}
+
 export function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(req.headers.get('origin')) });
 }
 
 /** POST /api/v1/collect — public browser analytics ingestion endpoint. */
-export const POST = withPublic(async (req, ctx) => {
+const collectPost = withPublic(async (req, ctx) => {
   let body: unknown;
   try {
     body = await req.json();
@@ -35,8 +41,12 @@ export const POST = withPublic(async (req, ctx) => {
     { siteId: result.siteId, accepted: result.accepted },
     'analytics collect accepted',
   );
-  return NextResponse.json(
-    { data: { accepted: result.accepted } },
-    { status: 202, headers: corsHeaders(origin) },
-  );
+  return NextResponse.json({ data: { accepted: result.accepted } }, { status: 202 });
 });
+
+export async function POST(req: NextRequest): Promise<Response> {
+  const origin = req.headers.get('origin');
+  const res = await collectPost(req);
+  applyCorsHeaders(res.headers, origin);
+  return res;
+}

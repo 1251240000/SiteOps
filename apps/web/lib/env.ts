@@ -18,6 +18,7 @@ const envSchema = z.object({
   REDIS_URL: z.string().url(),
   AUTH_SECRET: z.string().min(1).optional(),
   AUTH_URL: z.string().url().optional(),
+  SITEOPS_PUBLIC_ORIGIN: z.string().url().optional(),
   /** Max successful credentials submissions per IP per minute. */
   LOGIN_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(5),
   /**

@@ -84,7 +84,7 @@ export const analyticsRepo = {
       siteId: string;
       visitorId: string;
       sessionId: string;
-      seenAt: Date;
+      seenAt: string;
       referrer?: string | null;
       utm?: Record<string, unknown> | null;
       device?: Record<string, unknown> | null;
@@ -144,12 +144,12 @@ export const analyticsRepo = {
   async getOverview(
     db: Db,
     siteId: string,
-    range: { from: Date; to: Date },
+    range: { from: string; to: string },
   ): Promise<AnalyticsOverview> {
     const whereRange = and(
       eq(analyticsEvents.siteId, siteId),
-      sql`${analyticsEvents.occurredAt} >= ${range.from}`,
-      sql`${analyticsEvents.occurredAt} <= ${range.to}`,
+      sql`${analyticsEvents.occurredAt} >= ${range.from}::timestamptz`,
+      sql`${analyticsEvents.occurredAt} <= ${range.to}::timestamptz`,
     );
 
     try {

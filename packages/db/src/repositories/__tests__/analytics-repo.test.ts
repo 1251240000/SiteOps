@@ -42,7 +42,7 @@ describe('analyticsRepo', () => {
       type: 'event' as const,
       name: 'cta_click',
       eventHash: 'hash1',
-      occurredAt: new Date('2026-01-01T00:00:00Z'),
+      occurredAt: '2026-01-01T00:00:00.000Z',
       path: null,
       url: null,
       referrer: null,

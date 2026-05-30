@@ -16,8 +16,8 @@ export const analyticsSessions = pgTable(
       .references(() => sites.id, { onDelete: 'cascade' }),
     visitorId: text('visitor_id').notNull(),
     sessionId: text('session_id').notNull(),
-    startedAt: timestamp('started_at', { withTimezone: true, mode: 'date' }).notNull(),
-    lastSeenAt: timestamp('last_seen_at', { withTimezone: true, mode: 'date' }).notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true, mode: 'string' }).notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true, mode: 'string' }).notNull(),
     referrer: text('referrer'),
     utm: jsonb('utm').$type<Record<string, unknown>>(),
     device: jsonb('device').$type<Record<string, unknown>>(),
@@ -46,8 +46,8 @@ export const analyticsEvents = pgTable(
     referrer: text('referrer'),
     properties: jsonb('properties').$type<Record<string, unknown>>(),
     eventHash: text('event_hash').notNull(),
-    occurredAt: timestamp('occurred_at', { withTimezone: true, mode: 'date' }).notNull(),
-    receivedAt: timestamp('received_at', { withTimezone: true, mode: 'date' })
+    occurredAt: timestamp('occurred_at', { withTimezone: true, mode: 'string' }).notNull(),
+    receivedAt: timestamp('received_at', { withTimezone: true, mode: 'string' })
       .notNull()
       .default(sql`now()`),
   },

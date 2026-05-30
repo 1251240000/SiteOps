@@ -58,7 +58,7 @@ export const analyticsCollectService = {
       });
     }
 
-    const seenAt = new Date(payload.sentAt);
+    const seenAt = payload.sentAt;
     const first = payload.events[0];
     await analyticsRepo.upsertSession(db, {
       siteId: site.id,
@@ -87,7 +87,7 @@ export const analyticsCollectService = {
       referrer: event.referrer ?? null,
       properties: event.properties ?? {},
       eventHash: eventHash(site.id, payload, index),
-      occurredAt: new Date(event.ts),
+      occurredAt: event.ts,
     }));
     const accepted = await analyticsRepo.insertEvents(db, events);
     return { accepted, siteId: site.id };
